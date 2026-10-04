@@ -1,14 +1,24 @@
-﻿import os
+import os
 import sqlite3
 import json
 import subprocess
 import asyncio
+import time
 from core.database import DB_PATH
 
 async def _generate_audio(text: str, output_path: str, voice: str = "vi-VN-HoaiMyNeural"):
     import edge_tts
-    communicate = edge_tts.Communicate(text, voice)
-    await communicate.save(output_path)
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            communicate = edge_tts.Communicate(text, voice)
+            await communicate.save(output_path)
+            return
+        except Exception as e:
+            if attempt == max_retries - 1:
+                raise e
+            print(f"      [!] Lỗi sinh audio (lần {attempt + 1}): {e}. Thử lại sau {2 ** attempt}s...")
+            await asyncio.sleep(2 ** attempt)
 
 def get_audio_duration(file_path: str) -> float:
     try:
@@ -72,6 +82,7 @@ class VoiceSynthesizer:
             print(f"  -> Đang thu âm Scene {s_num}: {text[:40]}...")
             if not (os.path.exists(audio_path) and os.path.getsize(audio_path) > 0):
                 asyncio.run(_generate_audio(text, audio_path))
+                time.sleep(1) # Nghỉ 1 giây để tránh bị block WebSocket
                 
             actual_duration = get_audio_duration(audio_path)
             self._update_asset_duration(script_id, s_num, actual_duration, audio_name)

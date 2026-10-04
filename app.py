@@ -1,5 +1,6 @@
 ﻿# -*- coding: utf-8 -*-
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -304,9 +305,43 @@ def generate_assets(script_id: int):
     try:
         adapter = GeminiWebAdapter()
         engine = SceneIllustratorEngine(adapter=adapter)
-        asset_obj = engine.generate_prompts_and_images(script_id, script_dict)
+        asset_obj = engine.generate_assets(script_id, script_dict)
         save_asset(script_id, asset_obj)
         return {"status": "success"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class GenerateSingleAssetRequest(BaseModel):
+    image_prompt: str
+
+@app.post("/api/phase4/generate/{script_id}/{scene_number}")
+def generate_single_asset(script_id: int, scene_number: int, req: GenerateSingleAssetRequest):
+    try:
+        adapter = GeminiWebAdapter()
+        engine = SceneIllustratorEngine(adapter=adapter)
+        image_path = engine.generate_single_image(script_id, scene_number, req.image_prompt)
+        
+        if not image_path:
+            raise HTTPException(status_code=500, detail="Không thể sinh ảnh, xem log backend.")
+            
+        # Update into database
+        conn = get_conn()
+        cursor = conn.cursor()
+        cursor.execute("SELECT content FROM assets WHERE script_id = ?", (script_id,))
+        row = cursor.fetchone()
+        if row:
+            asset_data = json.loads(row[0])
+            for a_sc in asset_data.get('assets', []):
+                if a_sc.get('scene_number') == scene_number:
+                    a_sc['image_prompt'] = req.image_prompt
+                    a_sc['image_path'] = image_path
+                    break
+            cursor.execute("UPDATE assets SET content = ? WHERE script_id = ?", (json.dumps(asset_data), script_id))
+            conn.commit()
+        conn.close()
+        
+        return {"status": "success", "image_path": image_path}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -334,36 +369,56 @@ def update_assets(script_id: int, req: UpdateAssetRequest):
 @app.post("/api/phase5/render/{script_id}")
 def render_video(script_id: int):
     try:
-        engine = VideoAssemblerEngine()
-        
-        conn = get_conn()
-        cursor = conn.cursor()
-        cursor.execute("SELECT title FROM ideas i JOIN scripts s ON s.idea_id = i.id WHERE s.id = ?", (script_id,))
-        title_row = cursor.fetchone()
-        conn.close()
-        title = title_row[0] if title_row else f"Video_{script_id}"
-        
         projects = get_ready_to_render_projects_with_audio()
         project = next((p for p in projects if p['script_id'] == script_id), None)
-        
         if not project:
-            raise Exception("Project chÆ°a cÃ³ Ä‘á»§ hÃ¬nh áº£nh & Ã¢m thanh Ä‘á»ƒ render.")
+            raise Exception("Project chưa có đủ hình ảnh & âm thanh (Phase 3.5 và Phase 4) để ghép video.")
             
-        out_path = engine.assemble_video(project['timeline'], project['title'])
-        return {"status": "success", "video_path": out_path}
+        engine = VideoAssemblerEngine()
+        return StreamingResponse(engine.render_video_stream(script_id, project['timeline']), media_type="text/event-stream")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/phase5/status/{script_id}")
+def check_video_status(script_id: int):
+    import os
+    project_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), 'data', 'projects', str(script_id)))
+    output_file = os.path.join(project_dir, "final_video_with_voice.mp4")
+    if os.path.exists(output_file):
+        return {"status": "success", "video_path": f"data/projects/{script_id}/final_video_with_voice.mp4"}
+    return {"status": "not_found"}
 
 # --- PHASE 6: SEO & PUBLISH ---
 @app.post("/api/phase6/generate/{script_id}")
 def generate_seo(script_id: int):
     script_dict = get_script(script_id)
     try:
+        conn = get_conn()
+        cursor = conn.cursor()
+        
+        # Get title
+        cursor.execute("SELECT title FROM ideas i JOIN scripts s ON s.idea_id = i.id WHERE s.id = ?", (script_id,))
+        title_row = cursor.fetchone()
+        title = title_row[0] if title_row else f"Video_{script_id}"
+        
+        # Get assets
+        cursor.execute("SELECT content FROM assets WHERE script_id = ?", (script_id,))
+        asset_row = cursor.fetchone()
+        asset_dict = json.loads(asset_row[0]) if asset_row else {"assets": []}
+        
+        conn.close()
+        
         adapter = GeminiWebAdapter()
         engine = SEOOptimizerEngine(adapter=adapter)
-        seo_dict = engine.generate_metadata(script_dict)
-        save_seo_metadata(script_id, seo_dict)
-        return {"status": "success", "seo": seo_dict}
+        
+        seo_data, file_path = engine.format_upload_info(script_id, title, script_dict, asset_dict)
+        
+        if not seo_data:
+            raise Exception("Lỗi khi sinh SEO metadata.")
+            
+        save_seo_metadata(script_id, seo_data)
+        
+        return {"status": "success", "seo": seo_data}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

@@ -6,9 +6,30 @@ class SceneIllustratorEngine:
     def __init__(self, adapter: AIProviderContract):
         self.adapter = adapter
 
+    def generate_single_image(self, script_id: int, scene_number: int, prompt: str) -> str:
+        project_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'projects', str(script_id)))
+        os.makedirs(project_dir, exist_ok=True)
+        img_name = f"scene_{scene_number}.jpg"
+        img_path = os.path.join(project_dir, img_name)
+        print(f"\n=> [Scene {scene_number}] Vẽ lại ảnh với Prompt: {prompt}")
+        
+        # Xóa file cũ nếu có để force lưu file mới (dù adapter.generate_image thường tự ghi đè)
+        if os.path.exists(img_path):
+            try:
+                os.remove(img_path)
+            except Exception:
+                pass
+                
+        img_url = self.adapter.generate_image(prompt, save_path=img_path)
+        if img_url and os.path.exists(img_path):
+            print("  -> TẢI ẢNH THÀNH CÔNG!")
+            return f"data/projects/{script_id}/{img_name}"
+        else:
+            print("  -> LỖI: Trình giả lập không thể sinh hoặc tải ảnh về.")
+            return None
+
     def generate_assets(self, script_id: int, script_dict: dict) -> AssetJSON:
         all_scenes = script_dict['scenes']
-        
         project_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'projects', str(script_id)))
         os.makedirs(project_dir, exist_ok=True)
 
@@ -22,14 +43,12 @@ class SceneIllustratorEngine:
             
             print(f"\n=> [Scene {s_num}] Visual Concept: {sc['visual_concept']}")
             
-            # Cơ chế Resume
             if os.path.exists(img_path) and os.path.getsize(img_path) > 0:
                 print("  -> Ảnh đã tồn tại (Skip).")
                 rel_path = f"data/projects/{script_id}/{img_name}"
                 final_assets.append(AssetSceneJSON(scene_number=s_num, image_prompt=sc['visual_concept'], image_path=rel_path))
                 continue
             
-            # Gọi Gemini vẽ, bóc link và tự tải bằng chính trình duyệt đó
             img_url = self.adapter.generate_image(sc['visual_concept'], save_path=img_path)
             
             if img_url and os.path.exists(img_path):
@@ -39,7 +58,6 @@ class SceneIllustratorEngine:
             else:
                 print("  -> LỖI: Gemini từ chối vẽ ảnh hoặc không thể trích xuất/tải ảnh về.")
                 
-            # Đợi 5s cho máy nguội trước khi bắt nó vẽ tiếp
             time.sleep(5)
 
         return AssetJSON(script_id=script_id, assets=final_assets)

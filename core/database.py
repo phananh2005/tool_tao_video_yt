@@ -1,4 +1,4 @@
-﻿import sqlite3
+import sqlite3
 import os
 
 DB_PATH = os.path.join(os.path.dirname(__file__), '..', 'data', 'tubechain.db')
@@ -24,6 +24,7 @@ def init_db():
         summary TEXT,
         similarity_score REAL,
         status TEXT DEFAULT 'pending',
+        series_id TEXT,
         FOREIGN KEY(project_id) REFERENCES projects(id)
     )''')
     
@@ -206,7 +207,11 @@ def save_script(idea_id: int, script_obj):
     
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO scripts (idea_id, content) VALUES (?, ?)", (idea_id, json.dumps(script_dict)))
+    cursor.execute("SELECT id FROM scripts WHERE idea_id = ?", (idea_id,))
+    if cursor.fetchone():
+        cursor.execute("UPDATE scripts SET content = ? WHERE idea_id = ?", (json.dumps(script_dict), idea_id))
+    else:
+        cursor.execute("INSERT INTO scripts (idea_id, content) VALUES (?, ?)", (idea_id, json.dumps(script_dict)))
     
     cursor.execute("""CREATE TABLE IF NOT EXISTS voiceovers (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -271,7 +276,11 @@ def save_voiceover(script_id: int, voiceover_obj):
     
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO voiceovers (script_id, content) VALUES (?, ?)", (script_id, json.dumps(vo_dict)))
+    cursor.execute("SELECT id FROM voiceovers WHERE script_id = ?", (script_id,))
+    if cursor.fetchone():
+        cursor.execute("UPDATE voiceovers SET content = ? WHERE script_id = ?", (json.dumps(vo_dict), script_id))
+    else:
+        cursor.execute("INSERT INTO voiceovers (script_id, content) VALUES (?, ?)", (script_id, json.dumps(vo_dict)))
     
     cursor.execute("""CREATE TABLE IF NOT EXISTS assets (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -314,7 +323,22 @@ def save_asset(script_id: int, asset_obj):
     }
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO assets (script_id, content) VALUES (?, ?)", (script_id, json.dumps(asset_dict)))
+    
+    cursor.execute("SELECT content FROM assets WHERE script_id = ?", (script_id,))
+    row = cursor.fetchone()
+    
+    if row:
+        existing_data = json.loads(row[0])
+        for existing_sc in existing_data.get('assets', []):
+            for new_sc in asset_dict['assets']:
+                if new_sc.get('scene_number') == existing_sc.get('scene_number'):
+                    if 'duration_seconds' in existing_sc:
+                        new_sc['duration_seconds'] = existing_sc['duration_seconds']
+                    if 'audio_path' in existing_sc:
+                        new_sc['audio_path'] = existing_sc['audio_path']
+        cursor.execute("UPDATE assets SET content = ? WHERE script_id = ?", (json.dumps(asset_dict), script_id))
+    else:
+        cursor.execute("INSERT INTO assets (script_id, content) VALUES (?, ?)", (script_id, json.dumps(asset_dict)))
     
     cursor.execute("""CREATE TABLE IF NOT EXISTS seo_metadata (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -454,7 +478,11 @@ def get_rendered_projects_without_seo():
 def save_seo_metadata(script_id: int, seo_dict: dict):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO seo_metadata (script_id, content) VALUES (?, ?)", (script_id, json.dumps(seo_dict)))
+    cursor.execute("SELECT id FROM seo_metadata WHERE script_id = ?", (script_id,))
+    if cursor.fetchone():
+        cursor.execute("UPDATE seo_metadata SET content = ? WHERE script_id = ?", (json.dumps(seo_dict), script_id))
+    else:
+        cursor.execute("INSERT INTO seo_metadata (script_id, content) VALUES (?, ?)", (script_id, json.dumps(seo_dict)))
     conn.commit()
     conn.close()
 

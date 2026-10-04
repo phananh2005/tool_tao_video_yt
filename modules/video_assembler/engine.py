@@ -32,6 +32,59 @@ class VideoAssemblerEngine:
                 
         return video_concat_path, audio_concat_path
 
+    def render_video_stream(self, script_id: int, timeline: list):
+        project_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'projects', str(script_id)))
+        
+        yield f"data: [Engine] Bước 1: Khởi tạo dữ liệu Ảnh và Âm thanh cho FFmpeg...\n\n"
+        v_concat, a_concat = self.generate_concat_files(project_dir, timeline)
+        
+        output_file = os.path.join(project_dir, "final_video_with_voice.mp4")
+        if os.path.exists(output_file):
+            os.remove(output_file)
+            
+        yield f"data: [Engine] Bước 2: Bắt đầu Render video lồng tiếng...\n\n"
+        
+        command = [
+            "ffmpeg", 
+            "-f", "concat", "-safe", "0", "-i", v_concat,
+            "-f", "concat", "-safe", "0", "-i", a_concat,
+            "-vf", "scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2,fps=30,format=yuv420p",
+            "-c:v", "libx264",
+            "-c:a", "aac",
+            "-b:a", "192k",
+            "-shortest", 
+            "-y",
+            output_file
+        ]
+        
+        try:
+            # Dùng Popen để stream logs realtime
+            process = subprocess.Popen(
+                command, 
+                stdout=subprocess.PIPE, 
+                stderr=subprocess.STDOUT, 
+                text=True,
+                bufsize=1,
+                creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
+            )
+            
+            for line in iter(process.stdout.readline, ''):
+                if line:
+                    yield f"data: {line.strip()}\n\n"
+                    
+            process.stdout.close()
+            return_code = process.wait()
+            
+            if return_code == 0:
+                yield f"data: [Engine] => Render thành công! Video có tiếng lưu tại: {output_file}\n\n"
+                yield "data: [DONE]\n\n"
+            else:
+                yield f"data: [Engine] => LỖI FFmpeg (Exit code: {return_code})\n\n"
+                yield "data: [ERROR]\n\n"
+        except Exception as e:
+            yield f"data: [Engine] => Lỗi thực thi FFmpeg: {str(e)}\n\n"
+            yield "data: [ERROR]\n\n"
+
     def render_video_with_audio(self, script_id: int, timeline: list) -> bool:
         project_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'projects', str(script_id)))
         
@@ -46,18 +99,18 @@ class VideoAssemblerEngine:
         
         command = [
             "ffmpeg", 
-            "-f", "concat", "-safe", "0", "-i", v_concat,  # Input 1: Video (Ảnh)
-            "-f", "concat", "-safe", "0", "-i", a_concat,  # Input 2: Audio (Tiếng)
+            "-f", "concat", "-safe", "0", "-i", v_concat,
+            "-f", "concat", "-safe", "0", "-i", a_concat,
             "-vf", "scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2,fps=30,format=yuv420p",
             "-c:v", "libx264",
             "-c:a", "aac",
             "-b:a", "192k",
-            "-shortest", # Cắt video nếu audio hoặc video bị lệch đuôi
+            "-shortest", 
             output_file
         ]
         
         try:
-            result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
             if result.returncode == 0:
                 print(f"[Engine] => Render thành công! Video có tiếng lưu tại: {output_file}")
                 return True

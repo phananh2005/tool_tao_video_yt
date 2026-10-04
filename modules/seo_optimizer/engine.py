@@ -1,4 +1,4 @@
-﻿import json
+import json
 import re
 import os
 from typing import Dict
@@ -135,6 +135,6 @@ class SEOOptimizerEngine:
             
             if os.path.exists(thumb_path):
                 print(f"[Engine] => Thumbnail AI vẽ đã được lưu tại: thumbnail_youtube.jpg")
-                seo_data['thumbnail_path'] = thumb_path
+                seo_data['thumbnail_path'] = f"data/projects/{script_id}/thumbnail_youtube.jpg"
         
         return seo_data, file_path

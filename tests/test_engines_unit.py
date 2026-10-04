@@ -1,0 +1,182 @@
+﻿import pytest
+import sys
+import os
+import json
+from unittest.mock import Mock, patch, mock_open
+from dataclasses import asdict
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+import core.database as db_mod
+from core.database import init_db
+from core.contracts import (
+    IdeaJSON, ScriptJSON, SceneJSON, ChapterJSON,
+    VoiceoverJSON, VoiceoverSceneJSON,
+    AssetJSON, AssetSceneJSON, AIProviderContract,
+)
+from modules.idea_engine.engine import IdeaEngine
+from modules.script_gen.engine import ScriptGeneratorEngine
+from modules.voiceover.engine import VoiceoverEngine
+from modules.scene_illustrator.engine import SceneIllustratorEngine
+from modules.video_assembler.engine import VideoAssemblerEngine
+from modules.seo_optimizer.engine import SEOOptimizerEngine
+
+
+@pytest.fixture(autouse=True)
+def isolated_db(tmp_path):
+    test_db = str(tmp_path / "test.db")
+    db_mod.DB_PATH = test_db
+    init_db()
+    yield test_db
+
+
+# ==================== IdeaEngine ====================
+
+class StubAdapter(AIProviderContract):
+    def __init__(self, text_response="[]", image_response=""):
+        self._text = text_response
+        self._image = image_response
+
+    def generate_text(self, prompt, expected_format='json'):
+        return self._text
+
+    def generate_image(self, prompt, **kwargs):
+        return self._image
+
+
+def test_idea_engine_generate():
+    adapter = StubAdapter(
+        text_response='[{"title":"V1","topics":["a"],"rabbit_hole_series":false,"part_number":1,"summary":"s"}]'
+    )
+    engine = IdeaEngine(adapter=adapter)
+    ideas = engine.generate_ideas("test")
+    assert len(ideas) == 1
+    assert ideas[0].title == "V1"
+    assert isinstance(ideas[0], IdeaJSON)
+
+
+def test_idea_engine_dedup_three_levels():
+    engine = IdeaEngine(adapter=StubAdapter())
+    old = IdeaJSON(title="Old", topics=["python", "coding", "tutorial"], rabbit_hole_series=False, part_number=1, summary="")
+    exact = IdeaJSON(title="E", topics=["python", "coding", "tutorial"], rabbit_hole_series=False, part_number=1, summary="")
+    partial = IdeaJSON(title="P", topics=["python", "coding", "oop"], rabbit_hole_series=False, part_number=1, summary="")
+    different = IdeaJSON(title="D", topics=["java", "oop"], rabbit_hole_series=False, part_number=1, summary="")
+    assert engine.dedup_filter(exact, [old]) == "drop"
+    assert engine.dedup_filter(partial, [old]) == "warn"
+    assert engine.dedup_filter(different, [old]) == "pass"
+
+
+def test_idea_engine_rabbit_hole_max_3():
+    engine = IdeaEngine(adapter=StubAdapter())
+    ideas = [IdeaJSON(title=f"P{i}", topics=["t"], rabbit_hole_series=True, part_number=i, summary="") for i in range(1, 6)]
+    result = engine.enforce_rabbit_hole(ideas)
+    assert len(result) == 3
+
+
+# ==================== ScriptGeneratorEngine ====================
+
+def test_script_generator_full_script():
+    adapter = Mock()
+    engine = ScriptGeneratorEngine(adapter=adapter)
+    engine.generate_outline = Mock(return_value=[
+        ChapterJSON(chapter_number=1, title="Ch1", summary="Summary1"),
+    ])
+    scene = SceneJSON(chapter_number=1, scene_number=0, visual_concept="Cat", duration_seconds=10, narration_outline=["Hi"])
+    engine.generate_chapter_scenes = Mock(return_value=[scene])
+
+    idea = IdeaJSON(title="Test", topics=["t"], rabbit_hole_series=False, part_number=1, summary="s")
+    script = engine.generate_full_script(1, idea)
+
+    assert isinstance(script, ScriptJSON)
+    assert script.idea_id == 1
+    assert len(script.scenes) == 1
+    assert script.scenes[0].scene_number == 1
+    assert script.estimated_total_duration == 10
+
+
+# ==================== VoiceoverEngine ====================
+
+def test_voiceover_engine_full():
+    adapter = StubAdapter(
+        text_response='[{"scene_number": 1, "spoken_text": "Hello world"}]'
+    )
+    engine = VoiceoverEngine(adapter=adapter)
+    script_dict = {
+        "scenes": [{"chapter_number": 1, "scene_number": 1, "visual_concept": "Cat", "duration_seconds": 10, "narration_outline": ["Hello"]}]
+    }
+    vo = engine.generate_full_voiceover(1, script_dict, "Test Title")
+    assert isinstance(vo, VoiceoverJSON)
+    assert vo.script_id == 1
+    assert len(vo.voiceover_scenes) == 1
+    assert vo.voiceover_scenes[0].spoken_text == "Hello world"
+
+
+# ==================== SceneIllustratorEngine ====================
+
+def test_scene_illustrator_generate_assets():
+    adapter = Mock()
+    adapter.generate_image.return_value = "http://example.com/img.jpg"
+    engine = SceneIllustratorEngine(adapter=adapter)
+
+    script_dict = {
+        "scenes": [{"scene_number": 1, "visual_concept": "A cat sitting", "duration_seconds": 10}]
+    }
+
+    with patch("os.path.exists", return_value=False), \
+         patch("os.path.getsize", return_value=0), \
+         patch("os.makedirs"), \
+         patch("time.sleep"):
+        assets = engine.generate_assets(99, script_dict)
+
+    assert isinstance(assets, AssetJSON)
+    assert assets.script_id == 99
+
+
+# ==================== VideoAssemblerEngine ====================
+
+def test_video_assembler_render_stream():
+    engine = VideoAssemblerEngine()
+
+    mock_process = Mock()
+    mock_process.stdout.__iter__ = Mock(return_value=iter(["frame=1 time=00:00:01", ""]))
+    mock_process.stdout.readline = Mock(side_effect=["frame=1", ""])
+    mock_process.stdout.close = Mock()
+    mock_process.wait.return_value = 0
+
+    timeline = [{"image_path": "img.jpg", "audio_path": "voice.mp3", "duration": 10}]
+
+    with patch.object(engine, "generate_concat_files", return_value=("v.txt", "a.txt")), \
+         patch("subprocess.Popen", return_value=mock_process), \
+         patch("os.path.exists", return_value=True), \
+         patch("os.remove"):
+        chunks = list(engine.render_video_stream(1, timeline))
+
+    assert any("[DONE]" in c for c in chunks)
+
+
+# ==================== SEOOptimizerEngine ====================
+
+def test_seo_engine_format_upload_info():
+    adapter = StubAdapter(
+        text_response='{"title":"SEO Title","description":"SEO Desc","tags":"t1,t2","thumbnail_concept":"Cool thumb"}'
+    )
+    adapter.generate_image = Mock(return_value="")
+    engine = SEOOptimizerEngine(adapter=adapter)
+
+    script_dict = {
+        "scenes": [
+            {"chapter_number": 1, "scene_number": 1, "visual_concept": "Cat", "duration_seconds": 10, "narration_outline": ["Hi"]},
+        ]
+    }
+    asset_dict = {
+        "assets": [{"scene_number": 1, "duration_seconds": 10}]
+    }
+
+    with patch("os.path.exists", return_value=True), \
+         patch("os.makedirs"), \
+         patch("builtins.open", mock_open()):
+        seo_data, file_path = engine.format_upload_info(1, "Test Video", script_dict, asset_dict)
+
+    assert seo_data["title"] == "SEO Title"
+    assert seo_data["description"] == "SEO Desc"
+    assert "thumbnail_concept" in seo_data
