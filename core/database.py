@@ -277,3 +277,57 @@ def save_asset(script_id: int, asset_obj):
     cursor.execute("INSERT INTO assets (script_id, content) VALUES (?, ?)", (script_id, json.dumps(asset_dict)))
     conn.commit()
     conn.close()
+
+def get_ready_to_render_projects():
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    # Lấy những kịch bản đã có dữ liệu Asset (hình ảnh)
+    cursor.execute("""
+        SELECT s.id, i.title, s.content, a.content
+        FROM scripts s
+        JOIN ideas i ON s.idea_id = i.id
+        JOIN assets a ON s.id = a.script_id
+    """)
+    rows = cursor.fetchall()
+    conn.close()
+    
+    projects = []
+    for r in rows:
+        script_id = r[0]
+        title = r[1]
+        
+        try:
+            script_data = json.loads(r[2])
+            asset_data = json.loads(r[3])
+            
+            # Gộp dữ liệu: map scene_number -> duration (từ script) và image_path (từ asset)
+            timeline = []
+            
+            # Tạo dictionary tra cứu nhanh thời lượng từ Script
+            durations = {}
+            for sc in script_data.get('scenes', []):
+                durations[sc['scene_number']] = sc['duration_seconds']
+                
+            # Duyệt qua các Asset để ráp thành timeline
+            for a_sc in asset_data.get('assets', []):
+                s_num = a_sc['scene_number']
+                if s_num in durations:
+                    timeline.append({
+                        'scene_number': s_num,
+                        'duration': durations[s_num],
+                        'image_path': a_sc['image_path']
+                    })
+            
+            # Sắp xếp lại cho đúng thứ tự từ đầu đến cuối
+            timeline.sort(key=lambda x: x['scene_number'])
+            
+            projects.append({
+                'script_id': script_id,
+                'title': title,
+                'timeline': timeline
+            })
+        except Exception as e:
+            print(f"Lỗi parse dữ liệu cho script {script_id}: {e}")
+            
+    return projects
