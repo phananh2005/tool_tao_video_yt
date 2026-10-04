@@ -34,6 +34,14 @@ def init_db():
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(idea_id) REFERENCES ideas(id)
     )""")
+    
+    cursor.execute("""CREATE TABLE IF NOT EXISTS voiceovers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        script_id INTEGER UNIQUE,
+        content TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(script_id) REFERENCES scripts(id)
+    )""")
     conn.commit()
     conn.close()
 
@@ -63,6 +71,14 @@ def get_or_create_project(name: str) -> int:
         content TEXT NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(idea_id) REFERENCES ideas(id)
+    )""")
+    
+    cursor.execute("""CREATE TABLE IF NOT EXISTS voiceovers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        script_id INTEGER UNIQUE,
+        content TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(script_id) REFERENCES scripts(id)
     )""")
     conn.commit()
     conn.close()
@@ -95,6 +111,14 @@ def save_idea(project_id: int, idea: IdeaJSON, similarity_score: float, status: 
         content TEXT NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(idea_id) REFERENCES ideas(id)
+    )""")
+    
+    cursor.execute("""CREATE TABLE IF NOT EXISTS voiceovers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        script_id INTEGER UNIQUE,
+        content TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(script_id) REFERENCES scripts(id)
     )""")
     conn.commit()
     conn.close()
@@ -135,5 +159,54 @@ def save_script(idea_id: int, script_obj):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute("INSERT INTO scripts (idea_id, content) VALUES (?, ?)", (idea_id, json.dumps(script_dict)))
+    
+    cursor.execute("""CREATE TABLE IF NOT EXISTS voiceovers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        script_id INTEGER UNIQUE,
+        content TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(script_id) REFERENCES scripts(id)
+    )""")
+    conn.commit()
+    conn.close()
+
+def get_scripts_without_voiceover():
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT s.id, i.title, i.summary 
+        FROM scripts s
+        JOIN ideas i ON s.idea_id = i.id
+        LEFT JOIN voiceovers v ON s.id = v.script_id 
+        WHERE v.id IS NULL
+    """)
+    rows = cursor.fetchall()
+    conn.close()
+    return [{'script_id': r[0], 'title': r[1], 'summary': r[2]} for r in rows]
+
+def get_script_by_id(script_id: int):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT content FROM scripts WHERE id = ?", (script_id,))
+    row = cursor.fetchone()
+    conn.close()
+    if not row:
+        return None
+    
+    script_dict = json.loads(row[0])
+    # Tái tạo lại cấu trúc object (Dict)
+    return script_dict
+
+def save_voiceover(script_id: int, voiceover_obj):
+    import json
+    scenes_dict = [sc.__dict__ for sc in voiceover_obj.voiceover_scenes]
+    vo_dict = {
+        'script_id': voiceover_obj.script_id,
+        'voiceover_scenes': scenes_dict
+    }
+    
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO voiceovers (script_id, content) VALUES (?, ?)", (script_id, json.dumps(vo_dict)))
     conn.commit()
     conn.close()

@@ -38,3 +38,13 @@ class ScriptJSON:
     idea_id: int
     estimated_total_duration: int
     scenes: List[SceneJSON]
+
+@dataclass
+class VoiceoverSceneJSON:
+    scene_number: int
+    spoken_text: str
+
+@dataclass
+class VoiceoverJSON:
+    script_id: int
+    voiceover_scenes: List[VoiceoverSceneJSON]
