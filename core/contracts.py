@@ -48,3 +48,14 @@ class VoiceoverSceneJSON:
 class VoiceoverJSON:
     script_id: int
     voiceover_scenes: List[VoiceoverSceneJSON]
+
+@dataclass
+class AssetSceneJSON:
+    scene_number: int
+    image_prompt: str
+    image_path: str
+
+@dataclass
+class AssetJSON:
+    script_id: int
+    assets: List[AssetSceneJSON]

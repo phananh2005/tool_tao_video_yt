@@ -42,6 +42,14 @@ def init_db():
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(script_id) REFERENCES scripts(id)
     )""")
+    
+    cursor.execute("""CREATE TABLE IF NOT EXISTS assets (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        script_id INTEGER UNIQUE,
+        content TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(script_id) REFERENCES scripts(id)
+    )""")
     conn.commit()
     conn.close()
 
@@ -74,6 +82,14 @@ def get_or_create_project(name: str) -> int:
     )""")
     
     cursor.execute("""CREATE TABLE IF NOT EXISTS voiceovers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        script_id INTEGER UNIQUE,
+        content TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(script_id) REFERENCES scripts(id)
+    )""")
+    
+    cursor.execute("""CREATE TABLE IF NOT EXISTS assets (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         script_id INTEGER UNIQUE,
         content TEXT NOT NULL,
@@ -114,6 +130,14 @@ def save_idea(project_id: int, idea: IdeaJSON, similarity_score: float, status: 
     )""")
     
     cursor.execute("""CREATE TABLE IF NOT EXISTS voiceovers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        script_id INTEGER UNIQUE,
+        content TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(script_id) REFERENCES scripts(id)
+    )""")
+    
+    cursor.execute("""CREATE TABLE IF NOT EXISTS assets (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         script_id INTEGER UNIQUE,
         content TEXT NOT NULL,
@@ -167,6 +191,14 @@ def save_script(idea_id: int, script_obj):
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(script_id) REFERENCES scripts(id)
     )""")
+    
+    cursor.execute("""CREATE TABLE IF NOT EXISTS assets (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        script_id INTEGER UNIQUE,
+        content TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(script_id) REFERENCES scripts(id)
+    )""")
     conn.commit()
     conn.close()
 
@@ -208,5 +240,40 @@ def save_voiceover(script_id: int, voiceover_obj):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute("INSERT INTO voiceovers (script_id, content) VALUES (?, ?)", (script_id, json.dumps(vo_dict)))
+    
+    cursor.execute("""CREATE TABLE IF NOT EXISTS assets (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        script_id INTEGER UNIQUE,
+        content TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(script_id) REFERENCES scripts(id)
+    )""")
+    conn.commit()
+    conn.close()
+
+def get_scripts_without_assets():
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT s.id, i.title 
+        FROM scripts s
+        JOIN ideas i ON s.idea_id = i.id
+        LEFT JOIN assets a ON s.id = a.script_id 
+        WHERE a.id IS NULL
+    """)
+    rows = cursor.fetchall()
+    conn.close()
+    return [{'script_id': r[0], 'title': r[1]} for r in rows]
+
+def save_asset(script_id: int, asset_obj):
+    import json
+    scenes_dict = [sc.__dict__ for sc in asset_obj.assets]
+    asset_dict = {
+        'script_id': asset_obj.script_id,
+        'assets': scenes_dict
+    }
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO assets (script_id, content) VALUES (?, ?)", (script_id, json.dumps(asset_dict)))
     conn.commit()
     conn.close()
