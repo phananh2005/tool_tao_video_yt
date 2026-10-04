@@ -18,3 +18,23 @@ class AIProviderContract(ABC):
     @abstractmethod
     def generate_image(self, prompt: str) -> str:
         pass
+
+@dataclass
+class ChapterJSON:
+    chapter_number: int
+    title: str
+    summary: str
+
+@dataclass
+class SceneJSON:
+    chapter_number: int
+    scene_number: int
+    visual_concept: str
+    duration_seconds: int
+    narration_outline: List[str]
+
+@dataclass
+class ScriptJSON:
+    idea_id: int
+    estimated_total_duration: int
+    scenes: List[SceneJSON]
