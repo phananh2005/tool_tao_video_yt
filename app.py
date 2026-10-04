@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -273,19 +273,27 @@ def update_voiceover(script_id: int, req: UpdateVoiceoverRequest):
     conn.close()
     return {"status": "success"}
 
+from pydantic import BaseModel
+class SynthesizeSceneRequest(BaseModel):
+    text: str
+
 @app.post("/api/phase3_5/synthesize/{script_id}")
 def synthesize_voice(script_id: int):
-    vo_data = get_voiceover(script_id)
     try:
         synth = VoiceSynthesizer()
-        
-        # recreate object
-        from core.contracts import VoiceoverJSON, VoiceoverSceneJSON
-        vo_scenes = [VoiceoverSceneJSON(**s) for s in vo_data.get('voiceover_scenes', [])]
-        vo_obj = VoiceoverJSON(script_id=script_id, voiceover_scenes=vo_scenes)
-        
-        result_paths = synth.synthesize_all(vo_obj)
+        result_paths = synth.synthesize_voiceover(script_id)
+        if not result_paths:
+            raise HTTPException(status_code=400, detail="Chưa có dữ liệu Voiceover.")
         return {"status": "success", "paths": result_paths}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/phase3_5/synthesize/{script_id}/{scene_number}")
+def synthesize_voice_scene(script_id: int, scene_number: int, req: SynthesizeSceneRequest):
+    try:
+        synth = VoiceSynthesizer()
+        audio_url = synth.synthesize_single_scene(script_id, scene_number, req.text)
+        return {"status": "success", "audio_url": audio_url}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -339,7 +347,7 @@ def render_video(script_id: int):
         project = next((p for p in projects if p['script_id'] == script_id), None)
         
         if not project:
-            raise Exception("Project chưa có đủ hình ảnh & âm thanh để render.")
+            raise Exception("Project chÆ°a cÃ³ Ä‘á»§ hÃ¬nh áº£nh & Ã¢m thanh Ä‘á»ƒ render.")
             
         out_path = engine.assemble_video(project['timeline'], project['title'])
         return {"status": "success", "video_path": out_path}
@@ -371,8 +379,10 @@ def get_seo(script_id: int):
     return json.loads(row[0])
 
 
-# Static Files (Giao diện Web)
+# Static Files (Giao diá»‡n Web)
 os.makedirs("web", exist_ok=True)
+os.makedirs("data", exist_ok=True)
+app.mount("/data", StaticFiles(directory="data"), name="data")
 app.mount("/", StaticFiles(directory="web", html=True), name="web")
 
 if __name__ == "__main__":

@@ -38,4 +38,350 @@
                 </div>
             </div>
 
-            
+            <!-- PHASE 3: VOICE STUDIO -->
+            <div v-if="currentScreen === 'phase3' && voiceoverData">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold">🎙️ Phase 3: Voice Studio</h2>
+                    <div class="flex items-center gap-4">
+                        <span v-if="isVoiceoverDirty" class="text-yellow-600 font-semibold text-sm">⚠️ Có thay đổi chưa lưu</span>
+                        <button @click="saveVoiceover" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded">Lưu Lời Thoại</button>
+                        <button @click="synthesizeVoice" class="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded font-bold">🎧 Tạo Voiceover toàn bộ</button>
+                        <button @click="generateAssets" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded font-bold">Vẽ Hình Ảnh ➡️</button>
+                    </div>
+                </div>
+                
+                <div class="space-y-6">
+                    <div v-for="(scene, idx) in voiceoverData.voiceover_scenes" :key="idx" class="bg-white p-5 rounded-lg shadow-sm border-l-4 border-purple-500">
+                        <div class="flex justify-between items-center mb-3">
+                            <h4 class="font-bold text-gray-700">🎬 Scene {{ scene.scene_number }}</h4>
+                            <button @click="synthesizeSingleScene(scene)" class="bg-indigo-100 text-indigo-700 hover:bg-indigo-200 px-3 py-1 rounded text-sm font-semibold flex items-center gap-1">
+                                🎧 Sinh Âm Thanh (TTS)
+                            </button>
+                        </div>
+                        <div class="mb-3">
+                            <label class="block text-sm font-semibold text-gray-600 mb-1">Spoken Text (Lời thoại):</label>
+                            <textarea v-model="scene.spoken_text" @input="markVoiceoverDirty" class="w-full border border-gray-300 p-3 rounded focus:ring-2 focus:ring-purple-400" rows="3"></textarea>
+                        </div>
+                        <div class="bg-gray-50 p-3 rounded border border-gray-200" v-if="getAudioUrl(scene.scene_number)">
+                            <label class="block text-sm font-semibold text-gray-500 mb-2">Nghe thử Audio:</label>
+                            <audio controls class="w-full h-10" :src="getAudioUrl(scene.scene_number)"></audio>
+                        </div>
+                        <div v-else class="text-sm text-gray-400 italic">
+                            Chưa có âm thanh cho phân cảnh này.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PHASE 4: ART GALLERY -->
+            <div v-if="currentScreen === 'phase4' && assetData">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold">🎨 Phase 4: Art Gallery</h2>
+                    <div>
+                        <button @click="saveAssets" class="bg-green-500 text-white px-4 py-2 rounded mr-2">Lưu Prompt / Path</button>
+                        <button @click="renderVideo" class="bg-blue-500 text-white px-4 py-2 rounded font-bold">Render Video ➡️</button>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div v-for="(scene, idx) in assetData.assets" :key="idx" class="bg-white p-4 rounded shadow">
+                        <h4 class="font-bold mb-2">Scene {{ scene.scene_number }}</h4>
+                        <div class="mb-2">
+                            <label class="block text-sm font-semibold">Image Prompt:</label>
+                            <textarea v-model="scene.image_prompt" class="w-full border p-2 rounded text-sm" rows="3"></textarea>
+                        </div>
+                        <div class="mb-2">
+                            <label class="block text-sm font-semibold">Image Path (Local):</label>
+                            <input v-model="scene.image_path" class="w-full border p-1 rounded text-sm">
+                        </div>
+                        <div v-if="scene.image_path">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PHASE 5: RENDER ROOM -->
+            <div v-if="currentScreen === 'phase5'">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold">🎬 Phase 5: Render Room</h2>
+                    <button @click="generateSEO" class="bg-blue-500 text-white px-4 py-2 rounded font-bold">Tạo SEO ➡️</button>
+                </div>
+                
+                <div class="bg-gray-800 text-white p-6 rounded text-center shadow">
+                    <p class="mb-4">Video đã được render thành công!</p>
+                    <p class="font-mono text-green-400">{{ renderPath }}</p>
+                    <div class="mt-4">
+                        <button @click="renderVideo" class="bg-red-500 px-4 py-2 rounded">Render Lại</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PHASE 6: SEO & PUBLISH -->
+            <div v-if="currentScreen === 'phase6' && seoData">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold">🚀 Phase 6: SEO & Publish</h2>
+                    <button @click="goDashboard" class="bg-gray-500 text-white px-4 py-2 rounded">Hoàn Thành & Về Dashboard</button>
+                </div>
+                
+                <div class="bg-white p-6 rounded shadow max-w-3xl mx-auto space-y-4">
+                    <div>
+                        <label class="block font-bold text-gray-700">Title:</label>
+                        <input :value="seoData.title" readonly class="w-full border-b p-2 font-semibold text-lg bg-gray-50">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-gray-700">Description:</label>
+                        <textarea :value="seoData.description" readonly class="w-full border p-2 h-40 bg-gray-50"></textarea>
+                    </div>
+                    <div>
+                        <label class="block font-bold text-gray-700">Tags:</label>
+                        <input :value="seoData.tags.join(', ')" readonly class="w-full border-b p-2 bg-gray-50">
+                    </div>
+                    <button @click="copySEO" class="w-full bg-blue-500 text-white py-3 rounded font-bold hover:bg-blue-600">[Copy All]</button>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    currentScreen: 'dashboard',
+                    projects: [],
+                    newTheme: '',
+                    isRabbitHole: false,
+                    currentProject: null,
+                    currentIdeas: [],
+                    scriptData: null,
+                    voiceoverData: null,
+                    isVoiceoverDirty: false,
+                    audioCacheVersion: 1,
+                    assetData: null,
+                    renderPath: null,
+                    seoData: null,
+                    loading: false,
+                    loadingMsg: 'Đang xử lý...'
+                }
+            },
+            mounted() {
+                this.loadDashboard();
+            },
+            methods: {
+                markVoiceoverDirty() {
+                    this.isVoiceoverDirty = true;
+                },
+                getAudioUrl(scene_number) {
+                    let audio_path = null;
+                    if (this.assetData && this.assetData.assets) {
+                        const asset = this.assetData.assets.find(a => a.scene_number === scene_number);
+                        if (asset && asset.audio_path) {
+                            audio_path = asset.audio_path;
+                        }
+                    }
+                    if (!audio_path) {
+                        audio_path = `data/projects/${this.currentProject.current_script_id}/voice_${scene_number}.mp3`;
+                    }
+                    return `/${audio_path}?v=${this.audioCacheVersion}`;
+                },
+                async synthesizeSingleScene(scene) {
+                    this.withLoading(`Đang tổng hợp TTS cho Scene ${scene.scene_number}...`, async () => {
+                        const res = await this.apiCall(`/api/phase3_5/synthesize/${this.currentProject.current_script_id}/${scene.scene_number}`, 'POST', { text: scene.spoken_text });
+                        if (res && res.status === 'success') {
+                            this.audioCacheVersion++;
+                            try {
+                                this.assetData = await this.apiCall("/api/assets/" + this.currentProject.current_script_id);
+                            } catch(e) {}
+                        }
+                    });
+                },
+                async apiCall(url, method = 'GET', body = null) {
+                    try {
+                        const options = {
+                            method,
+                            headers: {
+                                'Content-Type': 'application/json'
+                            }
+                        };
+                        if (body) options.body = JSON.stringify(body);
+                        const res = await fetch("http://127.0.0.1:8000" + url, options);
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data.detail || 'API Error');
+                        return data;
+                    } catch (e) {
+                        alert("Lỗi: " + e.message);
+                        throw e;
+                    }
+                },
+                withLoading(msg, fn) {
+                    this.loading = true;
+                    this.loadingMsg = msg;
+                    Promise.resolve(fn()).finally(() => {
+                        this.loading = false;
+                    });
+                },
+                async loadDashboard() {
+                    this.withLoading('Đang tải danh sách dự án...', async () => {
+                        this.projects = await this.apiCall('/api/dashboard');
+                        this.currentScreen = 'dashboard';
+                        this.currentProject = null;
+                    });
+                },
+                goDashboard() {
+                    this.loadDashboard();
+                },
+                async openIdeaBank(p) {
+                    this.withLoading('Đang mở Kho Ý Tưởng...', async () => {
+                        this.currentProject = { id: p.id, name: p.name };
+                        this.currentIdeas = await this.apiCall("/api/projects/" + p.id + "/ideas");
+                        this.currentScreen = 'phase1';
+                    });
+                },
+                async deleteMedia(p) {
+                    if (!confirm('Bạn có chắc muốn xóa TOÀN BỘ FILE MEDIA (hình ảnh, âm thanh, video) của dự án này để giải phóng dung lượng ổ cứng? Dữ liệu chữ (kịch bản, tiêu đề) vẫn sẽ được giữ lại trong Database để chống trùng lặp.')) return;
+                    this.withLoading('Đang xóa file media...', async () => {
+                        await this.apiCall("/api/projects/" + p.id + "/media", 'DELETE');
+                        alert('Đã xóa sạch file media thành công! Dữ liệu dự án vẫn còn để hệ thống học hỏi.');
+                        this.loadDashboard();
+                    });
+                },
+                async rejectIdea(idea) {
+                    if (!confirm('Bạn có chắc muốn vứt bỏ ý tưởng này? Nó sẽ không bao giờ xuất hiện lại.')) return;
+                    this.withLoading('Đang xóa...', async () => {
+                        await this.apiCall("/api/ideas/" + idea.id + "/reject", 'PUT');
+                        this.currentIdeas = this.currentIdeas.filter(i => i.id !== idea.id);
+                    });
+                },
+                async brainstorm() {
+                    if (!this.newTheme) return;
+                    this.withLoading('AI đang động não ý tưởng...', async () => {
+                        const data = await this.apiCall('/api/phase1/brainstorm', 'POST', { theme: this.newTheme, is_rabbit_hole: this.isRabbitHole });
+                        this.loadIdeas(data.project_id);
+                    });
+                },
+                async loadIdeas(projectId) {
+                    this.withLoading('Đang tải danh sách ý tưởng...', async () => {
+                        this.currentIdeas = await this.apiCall("/api/projects/" + projectId + "/ideas");
+                        this.currentProject = { id: projectId, name: this.newTheme || 'Dự án đang mở' };
+                        this.currentScreen = 'phase1';
+                    });
+                },
+                async resumeProject(p) {
+                    this.currentProject = { id: p.id, name: p.name, current_script_id: p.current_script_id };
+                    if (p.phase === 1 || p.phase === '1 (Ý tưởng)') {
+                        await this.loadIdeas(p.id);
+                    } else if (p.phase === 2 || p.phase === '2 (Kịch bản)') {
+                        this.loadScript(p.current_script_id);
+                    } else if (p.phase === 3 || p.phase === '3 (Voiceover)') {
+                        this.loadVoiceover(p.current_script_id);
+                    } else if (p.phase === 4 || p.phase === '4 (Hình ảnh)') {
+                        this.loadAssets(p.current_script_id);
+                    } else if (p.phase === 5 || p.phase === '5 (Render)') {
+                        this.currentScreen = 'phase5';
+                    } else if (p.phase === 6 || p.phase === '6 (SEO & Publish)') {
+                        this.loadSEO(p.current_script_id);
+                    } else {
+                        await this.loadIdeas(p.id);
+                    }
+                },
+                async generateScript(ideaId) {
+                    this.withLoading('Đang tạo kịch bản...', async () => {
+                        const data = await this.apiCall("/api/phase2/generate/" + ideaId, 'POST');
+                        this.currentProject.current_script_id = data.script_id;
+                        this.scriptData = data.script;
+                        this.currentScreen = 'phase2';
+                    });
+                },
+                async loadScript(scriptId) {
+                    this.withLoading('Đang tải kịch bản...', async () => {
+                        this.scriptData = await this.apiCall("/api/scripts/" + scriptId);
+                        this.currentScreen = 'phase2';
+                    });
+                },
+                async saveScript() {
+                    this.withLoading('Đang lưu kịch bản...', async () => {
+                        await this.apiCall("/api/scripts/" + this.currentProject.current_script_id, 'PUT', { content: this.scriptData });
+                        alert('Lưu kịch bản thành công!');
+                    });
+                },
+                async generateVoiceover() {
+                    this.withLoading('Đang tạo lời thoại...', async () => {
+                        const data = await this.apiCall("/api/phase3/generate/" + this.currentProject.current_script_id, 'POST');
+                        this.voiceoverData = data.voiceover;
+                        this.currentScreen = 'phase3';
+                    });
+                },
+                async loadVoiceover(scriptId) {
+                    this.withLoading('Đang tải lời thoại...', async () => {
+                        this.voiceoverData = await this.apiCall("/api/voiceovers/" + scriptId);
+                        this.isVoiceoverDirty = false;
+                        this.currentScreen = 'phase3';
+                    });
+                },
+                async saveVoiceover() {
+                    this.withLoading('Đang lưu lời thoại...', async () => {
+                        await this.apiCall("/api/voiceovers/" + this.currentProject.current_script_id, 'PUT', { content: this.voiceoverData });
+                        this.isVoiceoverDirty = false;
+                        alert('Lưu lời thoại thành công!');
+                    });
+                },
+                async synthesizeVoice() {
+                    this.withLoading('Đang tổng hợp toàn bộ Voiceover...', async () => {
+                        await this.apiCall("/api/phase3_5/synthesize/" + this.currentProject.current_script_id, 'POST');
+                        this.audioCacheVersion++;
+                        alert('Đã tổng hợp toàn bộ âm thanh thành công!');
+                        try {
+                            this.assetData = await this.apiCall("/api/assets/" + this.currentProject.current_script_id);
+                        } catch(e) {}
+                    });
+                },
+                async generateAssets() {
+                    this.withLoading('Đang vẽ hình ảnh...', async () => {
+                        await this.apiCall("/api/phase4/generate/" + this.currentProject.current_script_id, 'POST');
+                        await this.loadAssets(this.currentProject.current_script_id);
+                    });
+                },
+                async loadAssets(scriptId) {
+                    this.withLoading('Đang tải hình ảnh...', async () => {
+                        this.assetData = await this.apiCall("/api/assets/" + scriptId);
+                        this.currentScreen = 'phase4';
+                    });
+                },
+                async saveAssets() {
+                    this.withLoading('Đang lưu hình ảnh...', async () => {
+                        await this.apiCall("/api/assets/" + this.currentProject.current_script_id, 'PUT', { content: this.assetData });
+                        alert('Lưu hình ảnh thành công!');
+                    });
+                },
+                async renderVideo() {
+                    this.withLoading('Đang render video bằng FFmpeg...', async () => {
+                        const res = await this.apiCall("/api/phase5/render/" + this.currentProject.current_script_id, 'POST');
+                        this.renderPath = res.video_path;
+                        this.currentScreen = 'phase5';
+                    });
+                },
+                async generateSEO() {
+                    this.withLoading('Đang tạo Metadata SEO...', async () => {
+                        const res = await this.apiCall("/api/phase6/generate/" + this.currentProject.current_script_id, 'POST');
+                        this.seoData = res.seo;
+                        this.currentScreen = 'phase6';
+                    });
+                },
+                async loadSEO(scriptId) {
+                    this.withLoading('Đang tải Metadata SEO...', async () => {
+                        this.seoData = await this.apiCall("/api/seo/" + scriptId);
+                        this.currentScreen = 'phase6';
+                    });
+                },
+                copySEO() {
+                    const text = "TITLE:\n" + this.seoData.title + "\n\nDESC:\n" + this.seoData.description + "\n\nTAGS:\n" + this.seoData.tags.join(', ');
+                    navigator.clipboard.writeText(text);
+                    alert('Đã copy!');
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
