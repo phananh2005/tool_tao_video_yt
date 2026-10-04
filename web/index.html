@@ -97,45 +97,67 @@
                 </div>
             </div>
 
-            <!-- PHASE 1: IDEA FACTORY -->
+                        <!-- PHASE 1: IDEA FACTORY -->
             <div v-if="currentScreen === 'phase1'">
                 <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-xl font-bold">💡 Phase 1: Idea Factory</h2>
-                    <button @click="goDashboard" class="text-blue-500 underline">Quay lại</button>
+                    <h2 class="text-xl font-bold">💡 Phase 1: Idea Factory (Kho Ý Tưởng)</h2>
+                    <button @click="goDashboard" class="text-blue-500 underline font-semibold hover:text-blue-700">Quay lại Dashboard</button>
                 </div>
                 
                 <div class="bg-white p-4 rounded shadow">
-                    <h3 class="font-bold mb-2">Các ý tưởng đã tạo</h3>
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-bold text-lg">Ý tưởng khả dụng</h3>
+                        <span class="text-sm text-gray-500">Tổng cộng: {{ currentIdeas.length }}</span>
+                    </div>
+                    
+                    <div v-if="currentIdeas.length === 0" class="text-center text-gray-500 py-6 border-2 border-dashed rounded">
+                        Kho ý tưởng trống. Hãy tiến hành Brainstorm để tạo thêm ý tưởng mới!
+                    </div>
+
                     <div class="space-y-4">
-                        <div v-for="p in projects" :key="p.id" class="bg-gray-50 border p-4 rounded shadow-sm">
-                            <div class="flex justify-between items-center border-b pb-3 mb-3">
-                                <div>
-                                    <span class="font-bold text-lg">{{ p.name }}</span>
-                                    <span class="text-sm text-gray-500 ml-2">ID: {{ p.id }} | {{ p.created_at }}</span>
-                                </div>
-                                <div>
-                                    <button @click="openIdeaBank(p)" class="bg-yellow-500 text-white px-3 py-1 rounded text-sm font-bold mr-2">💡 Kho Ý Tưởng ({{ p.unused_ideas_count }})</button>
-                                    <button @click="deleteMedia(p)" class="bg-red-500 text-white px-3 py-1 rounded text-sm">Dọn Media Theme</button>
-                                </div>
+                        <div v-for="idea in currentIdeas" :key="idea.id" 
+                             class="border rounded-lg shadow-sm p-4 relative bg-white transition-opacity"
+                             :class="{
+                                 'border-l-4 border-l-green-500': idea.status === 'pass', 
+                                 'border-l-4 border-l-yellow-500': idea.status === 'warn',
+                                 'border-l-4 border-l-red-500 opacity-60': idea.status === 'drop'
+                             }">
+                            
+                            <!-- Nút Vứt bỏ ở góc -->
+                            <button @click="rejectIdea(idea)" title="Vứt bỏ ý tưởng này"
+                                    class="absolute top-3 right-3 text-gray-400 hover:text-red-600 transition-colors">
+                                🗑️ Vứt bỏ
+                            </button>
+
+                            <div class="mb-2 pr-16 flex flex-col items-start gap-1">
+                                <span v-if="idea.rabbit_hole_series" class="bg-purple-600 text-white text-xs px-2 py-1 rounded font-bold shadow-sm">
+                                    🐰 Rabbit Hole: Phần {{ idea.part_number }}/3
+                                </span>
+                                <h4 class="font-bold text-lg leading-tight">{{ idea.title }}</h4>
                             </div>
                             
-                            <div v-if="p.active_scripts.length === 0" class="text-center text-gray-500 py-2">
-                                Chưa có video nào đang sản xuất. Hãy vào Kho Ý Tưởng để bắt đầu.
+                            <div class="flex flex-wrap gap-2 mb-3">
+                                <span v-for="topic in idea.topics" :key="topic" class="bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded border">
+                                    #{{ topic }}
+                                </span>
                             </div>
-                            <div v-else class="space-y-2">
-                                <div v-for="sc in p.active_scripts" :key="sc.script_id" 
-                                     :class="{'border-l-4 border-purple-500 bg-purple-100': sc.rabbit_hole_series, 'border border-gray-300 bg-white': !sc.rabbit_hole_series}"
-                                     class="p-3 rounded flex justify-between items-center shadow-sm">
-                                    <div>
-                                        <span v-if="sc.rabbit_hole_series" class="bg-purple-600 text-white text-xs px-2 py-1 rounded mr-2 font-bold">Phần {{ sc.part_number }}/3</span>
-                                        <span class="font-semibold">{{ sc.title }}</span>
-                                    </div>
-                                    <div class="flex items-center gap-3">
-                                        <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm font-mono font-bold">Phase {{ sc.phase }}</span>
-                                        <button @click="resumeScript(p, sc)" class="bg-green-600 text-white px-3 py-1 rounded text-sm font-bold">Vào Phase {{ sc.phase }}</button>
-                                        <button @click="deleteScriptMedia(sc.script_id)" class="text-red-500 text-sm font-semibold hover:underline">Xóa Media</button>
-                                    </div>
+                            
+                            <div class="flex items-center justify-between border-t pt-3 mt-2">
+                                <div class="flex items-center gap-3">
+                                    <span v-if="idea.status === 'pass'" class="bg-green-100 text-green-800 text-xs font-bold px-2 py-1 rounded">PASS</span>
+                                    <span v-if="idea.status === 'warn'" class="bg-yellow-100 text-yellow-800 text-xs font-bold px-2 py-1 rounded">WARN</span>
+                                    <span v-if="idea.status === 'drop'" class="bg-red-100 text-red-800 text-xs font-bold px-2 py-1 rounded">DROP</span>
+                                    
+                                    <span class="text-sm text-gray-500 font-medium" title="Tỷ lệ trùng lặp với các video cũ">
+                                        Độ trùng lặp: {{ Math.round(idea.score * 100) }}%
+                                    </span>
                                 </div>
+                                <button @click="generateScript(idea.id)" 
+                                        :disabled="idea.status === 'drop'"
+                                        :class="{'opacity-50 cursor-not-allowed bg-gray-400 hover:bg-gray-400': idea.status === 'drop', 'bg-blue-600 hover:bg-blue-700': idea.status !== 'drop'}"
+                                        class="text-white px-4 py-2 rounded font-bold shadow transition-colors flex items-center gap-2">
+                                    📝 Tạo Kịch Bản
+                                </button>
                             </div>
                         </div>
                     </div>

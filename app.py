@@ -160,15 +160,26 @@ def get_ideas_for_project(project_id: int):
     conn = get_conn()
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT i.id, i.title, i.topics, i.status, i.similarity_score 
+        SELECT i.id, i.title, i.topics, i.status, i.similarity_score, i.rabbit_hole_series, i.part_number 
         FROM ideas i
         LEFT JOIN scripts s ON i.id = s.idea_id
-        WHERE i.project_id = ? AND s.id IS NULL AND i.status NOT IN ('drop', 'rejected')
+        WHERE i.project_id = ? AND s.id IS NULL AND i.status != 'rejected'
         ORDER BY i.id DESC
     """, (project_id,))
     rows = cursor.fetchall()
     conn.close()
-    return [{"id": r[0], "title": r[1], "topics": json.loads(r[2]), "status": r[3], "score": r[4]} for r in rows]
+    return [
+        {
+            "id": r[0], 
+            "title": r[1], 
+            "topics": json.loads(r[2]), 
+            "status": r[3], 
+            "score": r[4],
+            "rabbit_hole_series": bool(r[5]),
+            "part_number": r[6]
+        } 
+        for r in rows
+    ]
 @app.put("/api/ideas/{idea_id}/reject")
 def reject_idea(idea_id: int):
     conn = get_conn()
