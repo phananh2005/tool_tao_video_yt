@@ -50,6 +50,14 @@ def init_db():
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(script_id) REFERENCES scripts(id)
     )""")
+    
+    cursor.execute("""CREATE TABLE IF NOT EXISTS seo_metadata (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        script_id INTEGER UNIQUE,
+        content TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(script_id) REFERENCES scripts(id)
+    )""")
     conn.commit()
     conn.close()
 
@@ -90,6 +98,14 @@ def get_or_create_project(name: str) -> int:
     )""")
     
     cursor.execute("""CREATE TABLE IF NOT EXISTS assets (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        script_id INTEGER UNIQUE,
+        content TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(script_id) REFERENCES scripts(id)
+    )""")
+    
+    cursor.execute("""CREATE TABLE IF NOT EXISTS seo_metadata (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         script_id INTEGER UNIQUE,
         content TEXT NOT NULL,
@@ -138,6 +154,14 @@ def save_idea(project_id: int, idea: IdeaJSON, similarity_score: float, status: 
     )""")
     
     cursor.execute("""CREATE TABLE IF NOT EXISTS assets (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        script_id INTEGER UNIQUE,
+        content TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(script_id) REFERENCES scripts(id)
+    )""")
+    
+    cursor.execute("""CREATE TABLE IF NOT EXISTS seo_metadata (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         script_id INTEGER UNIQUE,
         content TEXT NOT NULL,
@@ -199,6 +223,14 @@ def save_script(idea_id: int, script_obj):
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(script_id) REFERENCES scripts(id)
     )""")
+    
+    cursor.execute("""CREATE TABLE IF NOT EXISTS seo_metadata (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        script_id INTEGER UNIQUE,
+        content TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(script_id) REFERENCES scripts(id)
+    )""")
     conn.commit()
     conn.close()
 
@@ -248,6 +280,14 @@ def save_voiceover(script_id: int, voiceover_obj):
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(script_id) REFERENCES scripts(id)
     )""")
+    
+    cursor.execute("""CREATE TABLE IF NOT EXISTS seo_metadata (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        script_id INTEGER UNIQUE,
+        content TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(script_id) REFERENCES scripts(id)
+    )""")
     conn.commit()
     conn.close()
 
@@ -275,6 +315,14 @@ def save_asset(script_id: int, asset_obj):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute("INSERT INTO assets (script_id, content) VALUES (?, ?)", (script_id, json.dumps(asset_dict)))
+    
+    cursor.execute("""CREATE TABLE IF NOT EXISTS seo_metadata (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        script_id INTEGER UNIQUE,
+        content TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(script_id) REFERENCES scripts(id)
+    )""")
     conn.commit()
     conn.close()
 
@@ -375,3 +423,37 @@ def get_ready_to_render_projects_with_audio():
             print(f"Lỗi: {e}")
             
     return projects
+
+def get_rendered_projects_without_seo():
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT s.id, i.title, s.content, a.content
+        FROM scripts s
+        JOIN ideas i ON s.idea_id = i.id
+        JOIN assets a ON s.id = a.script_id
+        LEFT JOIN seo_metadata seo ON s.id = seo.script_id 
+        WHERE seo.id IS NULL
+    """)
+    rows = cursor.fetchall()
+    conn.close()
+    
+    projects = []
+    for r in rows:
+        try:
+            projects.append({
+                'script_id': r[0],
+                'title': r[1],
+                'script_dict': json.loads(r[2]),
+                'asset_dict': json.loads(r[3])
+            })
+        except:
+            pass
+    return projects
+
+def save_seo_metadata(script_id: int, seo_dict: dict):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO seo_metadata (script_id, content) VALUES (?, ?)", (script_id, json.dumps(seo_dict)))
+    conn.commit()
+    conn.close()
