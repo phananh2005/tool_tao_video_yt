@@ -457,3 +457,22 @@ def save_seo_metadata(script_id: int, seo_dict: dict):
     cursor.execute("INSERT INTO seo_metadata (script_id, content) VALUES (?, ?)", (script_id, json.dumps(seo_dict)))
     conn.commit()
     conn.close()
+
+
+def delete_project_media(project_id: int):
+    import shutil
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    # Tìm các script thuộc project này
+    cursor.execute("SELECT s.id FROM scripts s JOIN ideas i ON s.idea_id = i.id WHERE i.project_id = ?", (project_id,))
+    script_ids = [row[0] for row in cursor.fetchall()]
+    
+    # Xóa folder vật lý chứa Media (ảnh, video)
+    for sid in script_ids:
+        proj_dir = os.path.join(os.path.dirname(DB_PATH), '..', 'data', 'projects', str(sid))
+        if os.path.exists(proj_dir):
+            shutil.rmtree(proj_dir)
+            
+    # KHÔNG xóa dữ liệu trong DB để Phase 1 Idea Engine còn dùng chống trùng lặp.
+    conn.close()
