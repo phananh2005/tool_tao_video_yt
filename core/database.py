@@ -331,3 +331,47 @@ def get_ready_to_render_projects():
             print(f"Lỗi parse dữ liệu cho script {script_id}: {e}")
             
     return projects
+
+def get_ready_to_render_projects_with_audio():
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+        SELECT s.id, i.title, a.content
+        FROM scripts s
+        JOIN ideas i ON s.idea_id = i.id
+        JOIN assets a ON s.id = a.script_id
+    """)
+    rows = cursor.fetchall()
+    conn.close()
+    
+    projects = []
+    for r in rows:
+        script_id = r[0]
+        title = r[1]
+        
+        try:
+            asset_data = json.loads(r[2])
+            timeline = []
+            
+            for a_sc in asset_data.get('assets', []):
+                # Chỉ đưa vào render những phân cảnh có audio
+                if 'audio_path' in a_sc:
+                    timeline.append({
+                        'scene_number': a_sc['scene_number'],
+                        'duration': a_sc.get('duration_seconds', 10),
+                        'image_path': a_sc['image_path'],
+                        'audio_path': a_sc['audio_path']
+                    })
+            
+            if timeline:
+                timeline.sort(key=lambda x: x['scene_number'])
+                projects.append({
+                    'script_id': script_id,
+                    'title': title,
+                    'timeline': timeline
+                })
+        except Exception as e:
+            print(f"Lỗi: {e}")
+            
+    return projects

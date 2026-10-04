@@ -7,72 +7,59 @@ class VideoAssemblerEngine:
         pass
         
     def check_ffmpeg(self) -> bool:
-        """Kiểm tra xem máy tính đã cài đặt FFmpeg chưa."""
         if shutil.which("ffmpeg") is None:
             return False
         return True
 
-    def generate_concat_file(self, project_dir: str, timeline: list) -> str:
-        """Tạo file concat.txt chuẩn FFmpeg để nối ảnh."""
-        concat_path = os.path.join(project_dir, 'concat.txt')
+    def generate_concat_files(self, project_dir: str, timeline: list) -> tuple:
+        video_concat_path = os.path.join(project_dir, 'video_concat.txt')
+        audio_concat_path = os.path.join(project_dir, 'audio_concat.txt')
         
-        with open(concat_path, 'w', encoding='utf-8') as f:
+        with open(video_concat_path, 'w', encoding='utf-8') as f_v, open(audio_concat_path, 'w', encoding='utf-8') as f_a:
             for item in timeline:
-                # Đường dẫn phải sử dụng dấu '/' chuẩn Unix cho FFmpeg dù ở trên Windows
-                # image_path có dạng: data/projects/1/scene_1.jpg
-                # Vì concat.txt nằm cùng thư mục project, ta chỉ cần lấy tên file
                 img_name = os.path.basename(item['image_path'])
+                audio_name = os.path.basename(item['audio_path'])
                 duration = item['duration']
                 
-                f.write(f"file '{img_name}'\n")
-                f.write(f"duration {duration}\n")
+                f_v.write(f"file '{img_name}'\n")
+                f_v.write(f"duration {duration}\n")
                 
-            # FFmpeg yêu cầu lặp lại tấm ảnh cuối cùng mà không có dòng duration
+                f_a.write(f"file '{audio_name}'\n")
+                
             if timeline:
                 last_img = os.path.basename(timeline[-1]['image_path'])
-                f.write(f"file '{last_img}'\n")
+                f_v.write(f"file '{last_img}'\n")
                 
-        return concat_path
+        return video_concat_path, audio_concat_path
 
-    def render_video(self, script_id: int, timeline: list) -> bool:
+    def render_video_with_audio(self, script_id: int, timeline: list) -> bool:
         project_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'projects', str(script_id)))
         
-        print("\n[Engine] Bước 1: Khởi tạo dữ liệu Timeline cho FFmpeg...")
-        concat_file = self.generate_concat_file(project_dir, timeline)
+        print("\n[Engine] Bước 1: Khởi tạo dữ liệu Ảnh và Âm thanh cho FFmpeg...")
+        v_concat, a_concat = self.generate_concat_files(project_dir, timeline)
         
-        output_file = os.path.join(project_dir, "final_video.mp4")
-        
-        # Xóa file cũ nếu đã tồn tại để tránh FFmpeg hỏi "Overwrite? [y/N]" làm treo terminal
+        output_file = os.path.join(project_dir, "final_video_with_voice.mp4")
         if os.path.exists(output_file):
             os.remove(output_file)
             
-        print(f"[Engine] Bước 2: Bắt đầu Render video (Có thể mất vài phút tùy độ dài video)...")
-        
-        # Lệnh FFmpeg:
-        # -f concat -safe 0: Đọc file danh sách
-        # -i ... : Input file
-        # -vf ... : Bộ lọc Scale đảm bảo luôn ép về 1920x1080 (cắt bỏ phần thừa, giữ đúng tỷ lệ 16:9, lấp đầy viền đen)
-        # -c:v libx264: Chuẩn nén H264 phổ thông nhất
-        # -pix_fmt yuv420p: Đảm bảo tương thích với mọi trình phát video và trình duyệt
+        print(f"[Engine] Bước 2: Bắt đầu Render video lồng tiếng...")
         
         command = [
             "ffmpeg", 
-            "-f", "concat", 
-            "-safe", "0", 
-            "-i", concat_file,
-            "-vf", "scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2",
-            "-fps_mode", "vfr",
+            "-f", "concat", "-safe", "0", "-i", v_concat,  # Input 1: Video (Ảnh)
+            "-f", "concat", "-safe", "0", "-i", a_concat,  # Input 2: Audio (Tiếng)
+            "-vf", "scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2,fps=30,format=yuv420p",
             "-c:v", "libx264",
-            "-pix_fmt", "yuv420p",
+            "-c:a", "aac",
+            "-b:a", "192k",
+            "-shortest", # Cắt video nếu audio hoặc video bị lệch đuôi
             output_file
         ]
         
         try:
-            # Chạy ẩn quá trình render, chỉ hiện khi có lỗi
             result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-            
             if result.returncode == 0:
-                print(f"[Engine] => Render thành công! File lưu tại: {output_file}")
+                print(f"[Engine] => Render thành công! Video có tiếng lưu tại: {output_file}")
                 return True
             else:
                 print(f"[Engine] => LỖI FFmpeg:\n{result.stderr}")
