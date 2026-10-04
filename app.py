@@ -40,6 +40,7 @@ def get_conn():
 # --- MODELS ---
 class ThemeRequest(BaseModel):
     theme: str
+    is_rabbit_hole: bool = False
 
 class UpdateScriptRequest(BaseModel):
     content: dict
@@ -58,66 +59,63 @@ class UpdateSeoRequest(BaseModel):
 def get_dashboard():
     conn = get_conn()
     cursor = conn.cursor()
-    # Danh sách dự án
     cursor.execute("SELECT id, name, created_at FROM projects ORDER BY id DESC")
     projects = cursor.fetchall()
     
-    # Gom dữ liệu để tính toán Phase
-    cursor.execute("SELECT id, project_id, status FROM ideas")
-    ideas = cursor.fetchall()
+    cursor.execute("""
+        SELECT i.project_id, COUNT(i.id) 
+        FROM ideas i 
+        LEFT JOIN scripts s ON i.id = s.idea_id 
+        WHERE s.id IS NULL AND i.status NOT IN ('drop', 'rejected')
+        GROUP BY i.project_id
+    """)
+    unused_counts = {r[0]: r[1] for r in cursor.fetchall()}
     
-    cursor.execute("SELECT id, idea_id, content FROM scripts")
-    scripts = cursor.fetchall()
-    
-    cursor.execute("SELECT id, script_id, content FROM voiceovers")
-    voiceovers = cursor.fetchall()
-    
-    cursor.execute("SELECT id, script_id, content FROM assets")
-    assets = cursor.fetchall()
-    
-    cursor.execute("SELECT id, script_id, content FROM seo_metadata")
-    seo = cursor.fetchall()
-    
+    cursor.execute("""
+        SELECT 
+            i.project_id, 
+            s.id as script_id, 
+            i.id as idea_id, 
+            i.title, 
+            i.rabbit_hole_series, 
+            i.part_number, 
+            i.series_id,
+            (CASE WHEN seo.id IS NOT NULL THEN 6
+                  WHEN a.id IS NOT NULL THEN 4
+                  WHEN v.id IS NOT NULL THEN 3
+                  ELSE 2 END) as phase
+        FROM scripts s
+        JOIN ideas i ON s.idea_id = i.id
+        LEFT JOIN voiceovers v ON s.id = v.script_id
+        LEFT JOIN assets a ON s.id = a.script_id
+        LEFT JOIN seo_metadata seo ON s.id = seo.script_id
+    """)
+    active_scripts = cursor.fetchall()
     conn.close()
     
     result = []
     for p in projects:
         p_id = p[0]
-        # Tìm idea mới nhất không bị drop của project này
-        p_ideas = [i for i in ideas if i[1] == p_id and i[2] != 'drop']
-        
-        phase = 1
-        idea_id = p_ideas[-1][0] if p_ideas else None
-        script_id = None
-        
-        if idea_id:
-            p_script = [s for s in scripts if s[1] == idea_id]
-            if p_script:
-                script_id = p_script[-1][0]
-                phase = 2
-                
-                p_vo = [v for v in voiceovers if v[1] == script_id]
-                if p_vo:
-                    phase = 3
-                    
-                    p_asset = [a for a in assets if a[1] == script_id]
-                    if p_asset:
-                        phase = 4
-                        
-                        # Giả định Phase 5 (Render) đã xong nếu có ở seo
-                        p_seo = [s for s in seo if s[1] == script_id]
-                        if p_seo:
-                            phase = 6
-        
+        p_scripts = []
+        for r in active_scripts:
+            if r[0] == p_id:
+                p_scripts.append({
+                    "script_id": r[1],
+                    "idea_id": r[2],
+                    "title": r[3],
+                    "rabbit_hole_series": bool(r[4]),
+                    "part_number": r[5],
+                    "series_id": r[6],
+                    "phase": r[7]
+                })
+        p_scripts.sort(key=lambda x: (x['series_id'] or '', x['part_number'], x['script_id']))
         result.append({
             "id": p_id,
             "name": p[1],
             "created_at": p[2],
-            "phase": phase,
-            "current_idea_id": idea_id,
-            "current_script_id": script_id
+            "unused_ideas_count": unused_counts.get(p_id, 0),
+            "active_scripts": p_scripts
         })
-        
     return result
 
 
@@ -137,7 +135,7 @@ def brainstorm_ideas(req: ThemeRequest):
         adapter = GeminiWebAdapter()
         engine = IdeaEngine(adapter)
         
-        new_ideas = engine.generate_ideas(req.theme, count=5)
+        new_ideas = engine.generate_ideas(req.theme, count=5, is_rabbit_hole=req.is_rabbit_hole)
         history = get_project_ideas(project_id)
         
         results = []
@@ -145,8 +143,7 @@ def brainstorm_ideas(req: ThemeRequest):
             max_sim = max([engine.calculate_similarity(idea.topics, old.topics) for old in history] + [0.0])
             status = 'drop' if max_sim > 0.85 else ('warn' if max_sim >= 0.60 else 'pass')
             
-            if status != 'drop':
-                save_idea(project_id, idea, max_sim, status)
+            save_idea(project_id, idea, max_sim, status)
                 
             results.append({
                 "title": idea.title,
@@ -162,10 +159,25 @@ def brainstorm_ideas(req: ThemeRequest):
 def get_ideas_for_project(project_id: int):
     conn = get_conn()
     cursor = conn.cursor()
-    cursor.execute("SELECT id, title, topics, status, similarity_score FROM ideas WHERE project_id = ? AND status != 'drop' ORDER BY id DESC", (project_id,))
+    cursor.execute("""
+        SELECT i.id, i.title, i.topics, i.status, i.similarity_score 
+        FROM ideas i
+        LEFT JOIN scripts s ON i.id = s.idea_id
+        WHERE i.project_id = ? AND s.id IS NULL AND i.status NOT IN ('drop', 'rejected')
+        ORDER BY i.id DESC
+    """, (project_id,))
     rows = cursor.fetchall()
     conn.close()
     return [{"id": r[0], "title": r[1], "topics": json.loads(r[2]), "status": r[3], "score": r[4]} for r in rows]
+@app.put("/api/ideas/{idea_id}/reject")
+def reject_idea(idea_id: int):
+    conn = get_conn()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE ideas SET status = 'rejected' WHERE id = ?", (idea_id,))
+    conn.commit()
+    conn.close()
+    return {"status": "success"}
+
 
 # --- PHASE 2: SCRIPT BUILDER ---
 @app.post("/api/phase2/generate/{idea_id}")
@@ -355,3 +367,15 @@ app.mount("/", StaticFiles(directory="web", html=True), name="web")
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("app:app", host="127.0.0.1", port=8000, reload=True)
+
+@app.delete("/api/scripts/{script_id}/media")
+def delete_script_media_api(script_id: int):
+    import shutil
+    try:
+        from core.database import DB_PATH
+        proj_dir = os.path.join(os.path.dirname(DB_PATH), '..', 'data', 'projects', str(script_id))
+        if os.path.exists(proj_dir):
+            shutil.rmtree(proj_dir)
+        return {"status": "success"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

@@ -9,6 +9,7 @@ class IdeaJSON:
     rabbit_hole_series: bool
     part_number: int
     summary: str
+    series_id: Optional[str] = None
 
 class AIProviderContract(ABC):
     @abstractmethod
@@ -24,6 +25,7 @@ class ChapterJSON:
     chapter_number: int
     title: str
     summary: str
+    series_id: Optional[str] = None
 
 @dataclass
 class SceneJSON:

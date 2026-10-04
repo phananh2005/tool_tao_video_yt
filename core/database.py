@@ -119,7 +119,7 @@ def get_or_create_project(name: str) -> int:
 def get_project_ideas(project_id: int) -> list[IdeaJSON]:
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    cursor.execute("SELECT title, topics, rabbit_hole_series, part_number, summary FROM ideas WHERE project_id = ? AND status != 'dropped'", (project_id,))
+    cursor.execute("SELECT title, topics, rabbit_hole_series, part_number, summary FROM ideas WHERE project_id = ?", (project_id,))
     rows = cursor.fetchall()
     conn.close()
     ideas = []
@@ -133,9 +133,9 @@ def save_idea(project_id: int, idea: IdeaJSON, similarity_score: float, status: 
     cursor = conn.cursor()
     topics_str = json.dumps(idea.topics)
     cursor.execute('''INSERT INTO ideas 
-        (project_id, title, topics, rabbit_hole_series, part_number, summary, similarity_score, status) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)''', 
-        (project_id, idea.title, topics_str, idea.rabbit_hole_series, idea.part_number, idea.summary, similarity_score, status))
+        (project_id, title, topics, rabbit_hole_series, part_number, summary, similarity_score, status, series_id) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''', 
+        (project_id, idea.title, topics_str, idea.rabbit_hole_series, idea.part_number, idea.summary, similarity_score, status, idea.series_id))
     
     cursor.execute("""CREATE TABLE IF NOT EXISTS scripts (
         id INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -35,6 +35,8 @@ Toàn bộ quy trình được chia thành **6 giai đoạn** tuần tự:
     ↓
 [Phase 3] Tạo Lời thoại (Voiceover Script)
     ↓
+[Phase 3.5] Tổng hợp Âm thanh (Voice Synthesis / Mock)
+    ↓
 [Phase 4] Sinh Hình ảnh theo Khung cảnh
     ↓
 [Phase 5] Ghép Video (Assembly)
@@ -131,6 +133,14 @@ Chuyển kịch bản thành **lời thoại tự nhiên** để người dùng 
 > **Lưu ý:** Tool không tự động tạo giọng đọc (TTS). Người dùng tự thu âm hoặc sử dụng tool/dịch vụ TTS bên ngoài, sau đó import file audio vào để ghép video.
 
 **Đầu ra Phase 3:** Voiceover script text theo từng scene, sẵn sàng để thu âm.
+
+---
+
+### Phase 3.5: Tổng hợp Âm thanh (Voice Synthesis)
+
+Giai đoạn chèn giữa (Phase 3.5) đảm nhiệm việc chuyển đổi Text từ Phase 3 thành Audio thật sự (hoặc tạo file Audio Mock).
+- Hệ thống hỗ trợ sinh file âm thanh tự động hoặc cho phép người dùng upload/thu âm đè lên.
+- Phải hoàn thành Phase 3.5 (có đủ audio path) mới đủ điều kiện render ở Phase 5.
 
 ---
 
@@ -244,7 +254,11 @@ Tự động sinh metadata tối ưu cho YouTube.
     ▼
 [PHASE 3] Voiceover Writer
     │  Kịch bản → Chuyển thành lời nói tự nhiên
-    │  Output: Voiceover script text (người dùng tự thu âm)
+    │  Output: Voiceover script text
+    ▼
+[PHASE 3.5] Voice Synthesizer
+    │  Text → File Audio thực tế (hoặc Mock)
+    │  Output: Local Audio files
     ▼
 [PHASE 4] Scene Illustrator
     │  Kịch bản + B-roll keywords → Image prompts → AI sinh ảnh (hoặc tải thủ công)
@@ -285,3 +299,8 @@ Người dùng có thể:
 | **Scene Gallery** | Xem/sửa/upload lại ảnh từng scene |
 | **Video Preview** | Xem video đã ghép |
 | **Publish Center** | SEO metadata, thumbnail concept |
+
+## Cập nhật Kiến trúc Mới (Vui lòng tuân thủ)
+- **Kho Ý Tưởng (Idea Bank)**: Mọi idea tạo ra ở Phase 1 chưa dùng đến nằm trong Kho. Tái sử dụng hoặc Drop để tiết kiệm AI.
+- **Rabbit Hole 3 Phần**: Dùng chung `series_id`. Dashboard là Expandable Tree gom các video chung chuỗi.
+- **Media vs Data**: Nút Xóa Media chỉ xóa vật lý, KHÔNG đụng SQL để AI còn chống trùng lặp.

@@ -40,39 +40,60 @@
                 
                 <div class="bg-white p-4 rounded shadow mb-6">
                     <h3 class="font-bold mb-2">Tạo Dự án Mới</h3>
-                    <div class="flex gap-2">
-                        <input v-model="newTheme" class="border p-2 flex-grow rounded" placeholder="Nhập chủ đề (VD: Lịch sử La Mã)">
-                        <button @click="brainstorm" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 font-bold">[Brainstorm]</button>
+                    <div class="flex flex-col gap-2">
+                        <select v-model="newTheme" class="border p-2 rounded bg-white">
+                            <option value="" disabled>-- Chọn 1 trong 6 Trụ cột Chủ đề --</option>
+                            <option value="Những điều thú vị, kỳ lạ, có thể bạn chưa biết">1. Những điều thú vị, kỳ lạ, có thể bạn chưa biết</option>
+                            <option value="Tâm lý học hành vi">2. Tâm lý học hành vi</option>
+                            <option value="Quản lý tài chính cá nhân">3. Quản lý tài chính cá nhân</option>
+                            <option value="Phát triển bản thân">4. Phát triển bản thân</option>
+                            <option value="Sức khỏe & Ăn uống">5. Sức khỏe & Ăn uống</option>
+                            <option value="Bí ẩn thế giới & Sự thật về cơ thể người">6. Bí ẩn thế giới & Sự thật về cơ thể người</option>
+                        </select>
+                        <div class="flex items-center justify-between mt-2">
+                            <label class="flex items-center gap-2 font-bold cursor-pointer">
+                                <input type="checkbox" v-model="isRabbitHole" class="w-5 h-5"> Yêu cầu tạo chuỗi Rabbit Hole (3 phần liên kết)
+                            </label>
+                            <button @click="brainstorm" class="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600 font-bold shadow">[🚀 Khởi tạo & Brainstorm]</button>
+                        </div>
                     </div>
                 </div>
 
                 <div class="bg-white p-4 rounded shadow">
                     <h3 class="font-bold mb-2">Dự án Hiện tại</h3>
-                    <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr class="bg-gray-200">
-                                <th class="p-2 border">ID</th>
-                                <th class="p-2 border">Tên Dự án</th>
-                                <th class="p-2 border">Ngày tạo</th>
-                                <th class="p-2 border">Tiến độ (Phase)</th>
-                                <th class="p-2 border">Hành động</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr v-for="p in projects" :key="p.id" class="hover:bg-gray-50">
-                                <td class="p-2 border">{{ p.id }}</td>
-                                <td class="p-2 border font-bold">{{ p.name }}</td>
-                                <td class="p-2 border">{{ p.created_at }}</td>
-                                <td class="p-2 border">
-                                    <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">Phase {{ p.phase }}</span>
-                                </td>
-                                <td class="p-2 border">
-                                    <button @click="resumeProject(p)" class="bg-green-500 text-white px-3 py-1 rounded text-sm mr-2">Tiếp tục</button>
-                                    <button @click="deleteMedia(p)" class="bg-red-500 text-white px-3 py-1 rounded text-sm">Xóa Media</button>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+                    <div class="space-y-4">
+                        <div v-for="p in projects" :key="p.id" class="bg-gray-50 border p-4 rounded shadow-sm">
+                            <div class="flex justify-between items-center border-b pb-3 mb-3">
+                                <div>
+                                    <span class="font-bold text-lg">{{ p.name }}</span>
+                                    <span class="text-sm text-gray-500 ml-2">ID: {{ p.id }} | {{ p.created_at }}</span>
+                                </div>
+                                <div>
+                                    <button @click="openIdeaBank(p)" class="bg-yellow-500 text-white px-3 py-1 rounded text-sm font-bold mr-2">💡 Kho Ý Tưởng ({{ p.unused_ideas_count }})</button>
+                                    <button @click="deleteMedia(p)" class="bg-red-500 text-white px-3 py-1 rounded text-sm">Dọn Media Theme</button>
+                                </div>
+                            </div>
+                            
+                            <div v-if="p.active_scripts.length === 0" class="text-center text-gray-500 py-2">
+                                Chưa có video nào đang sản xuất. Hãy vào Kho Ý Tưởng để bắt đầu.
+                            </div>
+                            <div v-else class="space-y-2">
+                                <div v-for="sc in p.active_scripts" :key="sc.script_id" 
+                                     :class="{'border-l-4 border-purple-500 bg-purple-100': sc.rabbit_hole_series, 'border border-gray-300 bg-white': !sc.rabbit_hole_series}"
+                                     class="p-3 rounded flex justify-between items-center shadow-sm">
+                                    <div>
+                                        <span v-if="sc.rabbit_hole_series" class="bg-purple-600 text-white text-xs px-2 py-1 rounded mr-2 font-bold">Phần {{ sc.part_number }}/3</span>
+                                        <span class="font-semibold">{{ sc.title }}</span>
+                                    </div>
+                                    <div class="flex items-center gap-3">
+                                        <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm font-mono font-bold">Phase {{ sc.phase }}</span>
+                                        <button @click="resumeScript(p, sc)" class="bg-green-600 text-white px-3 py-1 rounded text-sm font-bold">Vào Phase {{ sc.phase }}</button>
+                                        <button @click="deleteScriptMedia(sc.script_id)" class="text-red-500 text-sm font-semibold hover:underline">Xóa Media</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -85,30 +106,39 @@
                 
                 <div class="bg-white p-4 rounded shadow">
                     <h3 class="font-bold mb-2">Các ý tưởng đã tạo</h3>
-                    <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr class="bg-gray-200">
-                                <th class="p-2 border">Tiêu đề</th>
-                                <th class="p-2 border">Topics</th>
-                                <th class="p-2 border w-24">Trạng thái</th>
-                                <th class="p-2 border w-24">Hành động</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr v-for="idea in currentIdeas" :key="idea.id">
-                                <td class="p-2 border font-medium">{{ idea.title }}</td>
-                                <td class="p-2 border text-sm">{{ idea.topics.join(', ') }}</td>
-                                <td class="p-2 border">
-                                    <span v-if="idea.status === 'pass'" class="bg-green-100 text-green-800 px-2 py-1 rounded">Pass</span>
-                                    <span v-else-if="idea.status === 'warn'" class="bg-yellow-100 text-yellow-800 px-2 py-1 rounded">Warn</span>
-                                    <span v-else class="bg-red-100 text-red-800 px-2 py-1 rounded">Drop</span>
-                                </td>
-                                <td class="p-2 border">
-                                    <button @click="generateScript(idea.id)" class="bg-blue-500 text-white px-3 py-1 rounded text-sm">Tạo Kịch Bản</button>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+                    <div class="space-y-4">
+                        <div v-for="p in projects" :key="p.id" class="bg-gray-50 border p-4 rounded shadow-sm">
+                            <div class="flex justify-between items-center border-b pb-3 mb-3">
+                                <div>
+                                    <span class="font-bold text-lg">{{ p.name }}</span>
+                                    <span class="text-sm text-gray-500 ml-2">ID: {{ p.id }} | {{ p.created_at }}</span>
+                                </div>
+                                <div>
+                                    <button @click="openIdeaBank(p)" class="bg-yellow-500 text-white px-3 py-1 rounded text-sm font-bold mr-2">💡 Kho Ý Tưởng ({{ p.unused_ideas_count }})</button>
+                                    <button @click="deleteMedia(p)" class="bg-red-500 text-white px-3 py-1 rounded text-sm">Dọn Media Theme</button>
+                                </div>
+                            </div>
+                            
+                            <div v-if="p.active_scripts.length === 0" class="text-center text-gray-500 py-2">
+                                Chưa có video nào đang sản xuất. Hãy vào Kho Ý Tưởng để bắt đầu.
+                            </div>
+                            <div v-else class="space-y-2">
+                                <div v-for="sc in p.active_scripts" :key="sc.script_id" 
+                                     :class="{'border-l-4 border-purple-500 bg-purple-100': sc.rabbit_hole_series, 'border border-gray-300 bg-white': !sc.rabbit_hole_series}"
+                                     class="p-3 rounded flex justify-between items-center shadow-sm">
+                                    <div>
+                                        <span v-if="sc.rabbit_hole_series" class="bg-purple-600 text-white text-xs px-2 py-1 rounded mr-2 font-bold">Phần {{ sc.part_number }}/3</span>
+                                        <span class="font-semibold">{{ sc.title }}</span>
+                                    </div>
+                                    <div class="flex items-center gap-3">
+                                        <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm font-mono font-bold">Phase {{ sc.phase }}</span>
+                                        <button @click="resumeScript(p, sc)" class="bg-green-600 text-white px-3 py-1 rounded text-sm font-bold">Vào Phase {{ sc.phase }}</button>
+                                        <button @click="deleteScriptMedia(sc.script_id)" class="text-red-500 text-sm font-semibold hover:underline">Xóa Media</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -242,6 +272,7 @@
                     currentScreen: 'dashboard',
                     projects: [],
                     newTheme: '',
+                    isRabbitHole: false,
                     currentProject: null,
                     currentIdeas: [],
                     scriptData: null,
@@ -292,6 +323,13 @@
                 goDashboard() {
                     this.loadDashboard();
                 },
+                async openIdeaBank(p) {
+                    this.withLoading('Đang mở Kho Ý Tưởng...', async () => {
+                        this.currentProject = { id: p.id, name: p.name };
+                        this.currentIdeas = await this.apiCall("/api/projects/" + p.id + "/ideas");
+                        this.currentScreen = 'phase1';
+                    });
+                },
                 async deleteMedia(p) {
                     if (!confirm('Bạn có chắc muốn xóa TOÀN BỘ FILE MEDIA (hình ảnh, âm thanh, video) của dự án này để giải phóng dung lượng ổ cứng? Dữ liệu chữ (kịch bản, tiêu đề) vẫn sẽ được giữ lại trong Database để chống trùng lặp.')) return;
                     this.withLoading('Đang xóa file media...', async () => {
@@ -300,10 +338,17 @@
                         this.loadDashboard();
                     });
                 },
+                async rejectIdea(idea) {
+                    if (!confirm('Bạn có chắc muốn vứt bỏ ý tưởng này? Nó sẽ không bao giờ xuất hiện lại.')) return;
+                    this.withLoading('Đang xóa...', async () => {
+                        await this.apiCall("/api/ideas/" + idea.id + "/reject", 'PUT');
+                        this.currentIdeas = this.currentIdeas.filter(i => i.id !== idea.id);
+                    });
+                },
                 async brainstorm() {
                     if (!this.newTheme) return;
                     this.withLoading('AI đang động não ý tưởng...', async () => {
-                        const data = await this.apiCall('/api/phase1/brainstorm', 'POST', { theme: this.newTheme });
+                        const data = await this.apiCall('/api/phase1/brainstorm', 'POST', { theme: this.newTheme, is_rabbit_hole: this.isRabbitHole });
                         this.loadIdeas(data.project_id);
                     });
                 },
