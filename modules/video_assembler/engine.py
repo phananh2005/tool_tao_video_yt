@@ -45,14 +45,20 @@ class VideoAssemblerEngine:
         yield f"data: [Engine] Bước 2: Bắt đầu Render video lồng tiếng...\n\n"
         
         command = [
-            "ffmpeg", 
+            "ffmpeg",
             "-f", "concat", "-safe", "0", "-i", v_concat,
             "-f", "concat", "-safe", "0", "-i", a_concat,
-            "-vf", "scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2,fps=30,format=yuv420p",
+            "-vf", "scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos,pad=1920:1080:(ow-iw)/2:(oh-ih)/2,unsharp=5:5:0.5:5:5:0.0,fps=30,format=yuv420p",
             "-c:v", "libx264",
+            "-preset", "veryslow",
+            "-tune", "stillimage",
+            "-crf", "16",
+            "-color_primaries", "bt709",
+            "-color_trc", "bt709",
+            "-colorspace", "bt709",
             "-c:a", "aac",
             "-b:a", "192k",
-            "-shortest", 
+            "-shortest",
             "-y",
             output_file
         ]
@@ -98,14 +104,20 @@ class VideoAssemblerEngine:
         print(f"[Engine] Bước 2: Bắt đầu Render video lồng tiếng...")
         
         command = [
-            "ffmpeg", 
+            "ffmpeg",
             "-f", "concat", "-safe", "0", "-i", v_concat,
             "-f", "concat", "-safe", "0", "-i", a_concat,
-            "-vf", "scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2,fps=30,format=yuv420p",
+            "-vf", "scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos,pad=1920:1080:(ow-iw)/2:(oh-ih)/2,unsharp=5:5:0.5:5:5:0.0,fps=30,format=yuv420p",
             "-c:v", "libx264",
+            "-preset", "veryslow",
+            "-tune", "stillimage",
+            "-crf", "16",
+            "-color_primaries", "bt709",
+            "-color_trc", "bt709",
+            "-colorspace", "bt709",
             "-c:a", "aac",
             "-b:a", "192k",
-            "-shortest", 
+            "-shortest",
             output_file
         ]
         

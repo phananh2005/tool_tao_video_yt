@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -38,6 +38,21 @@ init_db()
 def get_conn():
     return sqlite3.connect(DB_PATH)
 
+def ensure_db_columns():
+    try:
+        conn = get_conn()
+        cursor = conn.cursor()
+        cursor.execute("PRAGMA table_info(voiceovers)")
+        cols = [c[1] for c in cursor.fetchall()]
+        if 'is_synthesized' not in cols:
+            cursor.execute("ALTER TABLE voiceovers ADD COLUMN is_synthesized INTEGER DEFAULT 0")
+            conn.commit()
+        conn.close()
+    except Exception:
+        pass
+
+ensure_db_columns()
+
 # --- MODELS ---
 class ThemeRequest(BaseModel):
     theme: str
@@ -62,27 +77,28 @@ def get_dashboard():
     cursor = conn.cursor()
     cursor.execute("SELECT id, name, created_at FROM projects ORDER BY id DESC")
     projects = cursor.fetchall()
-    
+
     cursor.execute("""
-        SELECT i.project_id, COUNT(i.id) 
-        FROM ideas i 
-        LEFT JOIN scripts s ON i.id = s.idea_id 
+        SELECT i.project_id, COUNT(i.id)
+        FROM ideas i
+        LEFT JOIN scripts s ON i.id = s.idea_id
         WHERE s.id IS NULL AND i.status NOT IN ('drop', 'rejected')
         GROUP BY i.project_id
     """)
     unused_counts = {r[0]: r[1] for r in cursor.fetchall()}
-    
+
     cursor.execute("""
-        SELECT 
-            i.project_id, 
-            s.id as script_id, 
-            i.id as idea_id, 
-            i.title, 
-            i.rabbit_hole_series, 
-            i.part_number, 
+        SELECT
+            i.project_id,
+            s.id as script_id,
+            i.id as idea_id,
+            i.title,
+            i.rabbit_hole_series,
+            i.part_number,
             i.series_id,
             (CASE WHEN seo.id IS NOT NULL THEN 6
                   WHEN a.id IS NOT NULL THEN 4
+                  WHEN v.is_synthesized = 1 THEN 3.5
                   WHEN v.id IS NOT NULL THEN 3
                   ELSE 2 END) as phase
         FROM scripts s
@@ -90,10 +106,11 @@ def get_dashboard():
         LEFT JOIN voiceovers v ON s.id = v.script_id
         LEFT JOIN assets a ON s.id = a.script_id
         LEFT JOIN seo_metadata seo ON s.id = seo.script_id
+        WHERE i.status != 'archived'
     """)
     active_scripts = cursor.fetchall()
     conn.close()
-    
+
     result = []
     for p in projects:
         p_id = p[0]
@@ -135,17 +152,17 @@ def brainstorm_ideas(req: ThemeRequest):
     try:
         adapter = GeminiWebAdapter()
         engine = IdeaEngine(adapter)
-        
+
         new_ideas = engine.generate_ideas(req.theme, count=5, is_rabbit_hole=req.is_rabbit_hole)
         history = get_project_ideas(project_id)
-        
+
         results = []
         for idea in new_ideas:
             max_sim = max([engine.calculate_similarity(idea.topics, old.topics) for old in history] + [0.0])
             status = 'drop' if max_sim > 0.85 else ('warn' if max_sim >= 0.60 else 'pass')
-            
+
             save_idea(project_id, idea, max_sim, status)
-                
+
             results.append({
                 "title": idea.title,
                 "topics": idea.topics,
@@ -161,7 +178,7 @@ def get_ideas_for_project(project_id: int):
     conn = get_conn()
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT i.id, i.title, i.topics, i.status, i.similarity_score, i.rabbit_hole_series, i.part_number 
+        SELECT i.id, i.title, i.topics, i.status, i.similarity_score, i.rabbit_hole_series, i.part_number
         FROM ideas i
         LEFT JOIN scripts s ON i.id = s.idea_id
         WHERE i.project_id = ? AND s.id IS NULL AND i.status != 'rejected'
@@ -171,14 +188,14 @@ def get_ideas_for_project(project_id: int):
     conn.close()
     return [
         {
-            "id": r[0], 
-            "title": r[1], 
-            "topics": json.loads(r[2]), 
-            "status": r[3], 
+            "id": r[0],
+            "title": r[1],
+            "topics": json.loads(r[2]),
+            "status": r[3],
             "score": r[4],
             "rabbit_hole_series": bool(r[5]),
             "part_number": r[6]
-        } 
+        }
         for r in rows
     ]
 @app.put("/api/ideas/{idea_id}/reject")
@@ -197,13 +214,13 @@ def generate_script(idea_id: int):
     idea_obj = get_idea_by_id(idea_id)
     if not idea_obj:
         raise HTTPException(status_code=404, detail="Idea not found")
-        
+
     try:
         adapter = GeminiWebAdapter()
         engine = ScriptGeneratorEngine(adapter=adapter)
         script = engine.generate_full_script(idea_id, idea_obj)
         save_script(idea_id, script)
-        
+
         conn = get_conn()
         cursor = conn.cursor()
         cursor.execute("SELECT id FROM scripts WHERE idea_id = ?", (idea_id,))
@@ -237,20 +254,27 @@ def update_script(script_id: int, req: UpdateScriptRequest):
 @app.post("/api/phase3/generate/{script_id}")
 def generate_voiceover(script_id: int):
     script_dict = get_script(script_id)
-    
+
     conn = get_conn()
     cursor = conn.cursor()
     cursor.execute("SELECT title FROM ideas i JOIN scripts s ON s.idea_id = i.id WHERE s.id = ?", (script_id,))
     title_row = cursor.fetchone()
     conn.close()
     title_for_vo = title_row[0] if title_row else "Unknown"
-    
+
     try:
         adapter = GeminiWebAdapter()
         engine = VoiceoverEngine(adapter=adapter)
         vo_obj = engine.generate_full_voiceover(script_id, script_dict, title_for_vo)
         save_voiceover(script_id, vo_obj)
-        return {"status": "success", "voiceover": vo_obj.__dict__}
+        conn = get_conn()
+        cursor = conn.cursor()
+        cursor.execute("UPDATE voiceovers SET is_synthesized = 0 WHERE script_id = ?", (script_id,))
+        conn.commit()
+        conn.close()
+        vo_dict = vo_obj.__dict__.copy()
+        vo_dict['is_synthesized'] = False
+        return {"status": "success", "voiceover": vo_dict}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -258,12 +282,14 @@ def generate_voiceover(script_id: int):
 def get_voiceover(script_id: int):
     conn = get_conn()
     cursor = conn.cursor()
-    cursor.execute("SELECT content FROM voiceovers WHERE script_id = ?", (script_id,))
+    cursor.execute("SELECT content, is_synthesized FROM voiceovers WHERE script_id = ?", (script_id,))
     row = cursor.fetchone()
     conn.close()
     if not row:
         raise HTTPException(status_code=404, detail="Voiceover not found")
-    return json.loads(row[0])
+    data = json.loads(row[0])
+    data['is_synthesized'] = bool(row[1]) if len(row) > 1 and row[1] is not None else False
+    return data
 
 @app.put("/api/voiceovers/{script_id}")
 def update_voiceover(script_id: int, req: UpdateVoiceoverRequest):
@@ -285,7 +311,14 @@ def synthesize_voice(script_id: int):
         result_paths = synth.synthesize_voiceover(script_id)
         if not result_paths:
             raise HTTPException(status_code=400, detail="Chưa có dữ liệu Voiceover.")
+        conn = get_conn()
+        cursor = conn.cursor()
+        cursor.execute("UPDATE voiceovers SET is_synthesized = 1 WHERE script_id = ?", (script_id,))
+        conn.commit()
+        conn.close()
         return {"status": "success", "paths": result_paths}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -301,6 +334,13 @@ def synthesize_voice_scene(script_id: int, scene_number: int, req: SynthesizeSce
 # --- PHASE 4: ART GALLERY ---
 @app.post("/api/phase4/generate/{script_id}")
 def generate_assets(script_id: int):
+    conn = get_conn()
+    cursor = conn.cursor()
+    cursor.execute("SELECT is_synthesized FROM voiceovers WHERE script_id = ?", (script_id,))
+    row = cursor.fetchone()
+    conn.close()
+    if not row or row[0] != 1:
+        raise HTTPException(status_code=400, detail="Cần tổng hợp âm thanh (Phase 3.5) trước khi vẽ hình!")
     script_dict = get_script(script_id)
     try:
         adapter = GeminiWebAdapter()
@@ -308,6 +348,8 @@ def generate_assets(script_id: int):
         asset_obj = engine.generate_assets(script_id, script_dict)
         save_asset(script_id, asset_obj)
         return {"status": "success"}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -321,10 +363,10 @@ def generate_single_asset(script_id: int, scene_number: int, req: GenerateSingle
         adapter = GeminiWebAdapter()
         engine = SceneIllustratorEngine(adapter=adapter)
         image_path = engine.generate_single_image(script_id, scene_number, req.image_prompt)
-        
+
         if not image_path:
             raise HTTPException(status_code=500, detail="Không thể sinh ảnh, xem log backend.")
-            
+
         # Update into database
         conn = get_conn()
         cursor = conn.cursor()
@@ -340,7 +382,7 @@ def generate_single_asset(script_id: int, scene_number: int, req: GenerateSingle
             cursor.execute("UPDATE assets SET content = ? WHERE script_id = ?", (json.dumps(asset_data), script_id))
             conn.commit()
         conn.close()
-        
+
         return {"status": "success", "image_path": image_path}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -360,7 +402,21 @@ def get_assets(script_id: int):
 def update_assets(script_id: int, req: UpdateAssetRequest):
     conn = get_conn()
     cursor = conn.cursor()
-    cursor.execute("UPDATE assets SET content = ? WHERE script_id = ?", (json.dumps(req.content), script_id))
+    cursor.execute("SELECT content FROM assets WHERE script_id = ?", (script_id,))
+    row = cursor.fetchone()
+    if row:
+        existing_data = json.loads(row[0])
+        # Merge audio info from existing to req.content
+        for existing_sc in existing_data.get('assets', []):
+            for new_sc in req.content.get('assets', []):
+                if new_sc.get('scene_number') == existing_sc.get('scene_number'):
+                    if 'duration_seconds' in existing_sc:
+                        new_sc['duration_seconds'] = existing_sc['duration_seconds']
+                    if 'audio_path' in existing_sc:
+                        new_sc['audio_path'] = existing_sc['audio_path']
+        cursor.execute("UPDATE assets SET content = ? WHERE script_id = ?", (json.dumps(req.content), script_id))
+    else:
+        cursor.execute("INSERT INTO assets (script_id, content) VALUES (?, ?)", (script_id, json.dumps(req.content)))
     conn.commit()
     conn.close()
     return {"status": "success"}
@@ -373,7 +429,7 @@ def render_video(script_id: int):
         project = next((p for p in projects if p['script_id'] == script_id), None)
         if not project:
             raise Exception("Project chưa có đủ hình ảnh & âm thanh (Phase 3.5 và Phase 4) để ghép video.")
-            
+
         engine = VideoAssemblerEngine()
         return StreamingResponse(engine.render_video_stream(script_id, project['timeline']), media_type="text/event-stream")
     except Exception as e:
@@ -395,29 +451,29 @@ def generate_seo(script_id: int):
     try:
         conn = get_conn()
         cursor = conn.cursor()
-        
+
         # Get title
         cursor.execute("SELECT title FROM ideas i JOIN scripts s ON s.idea_id = i.id WHERE s.id = ?", (script_id,))
         title_row = cursor.fetchone()
         title = title_row[0] if title_row else f"Video_{script_id}"
-        
+
         # Get assets
         cursor.execute("SELECT content FROM assets WHERE script_id = ?", (script_id,))
         asset_row = cursor.fetchone()
         asset_dict = json.loads(asset_row[0]) if asset_row else {"assets": []}
-        
+
         conn.close()
-        
+
         adapter = GeminiWebAdapter()
         engine = SEOOptimizerEngine(adapter=adapter)
-        
+
         seo_data, file_path = engine.format_upload_info(script_id, title, script_dict, asset_dict)
-        
+
         if not seo_data:
             raise Exception("Lỗi khi sinh SEO metadata.")
-            
+
         save_seo_metadata(script_id, seo_data)
-        
+
         return {"status": "success", "seo": seo_data}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -434,16 +490,6 @@ def get_seo(script_id: int):
     return json.loads(row[0])
 
 
-# Static Files (Giao diá»‡n Web)
-os.makedirs("web", exist_ok=True)
-os.makedirs("data", exist_ok=True)
-app.mount("/data", StaticFiles(directory="data"), name="data")
-app.mount("/", StaticFiles(directory="web", html=True), name="web")
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run("app:app", host="127.0.0.1", port=8000, reload=True)
-
 @app.delete("/api/scripts/{script_id}/media")
 def delete_script_media_api(script_id: int):
     import shutil
@@ -452,6 +498,23 @@ def delete_script_media_api(script_id: int):
         proj_dir = os.path.join(os.path.dirname(DB_PATH), '..', 'data', 'projects', str(script_id))
         if os.path.exists(proj_dir):
             shutil.rmtree(proj_dir)
+
+        conn = get_conn()
+        cursor = conn.cursor()
+        cursor.execute("UPDATE ideas SET status = 'archived' WHERE id = (SELECT idea_id FROM scripts WHERE id = ?)", (script_id,))
+        conn.commit()
+        conn.close()
         return {"status": "success"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# Static Files (Giao diện Web)
+os.makedirs("web", exist_ok=True)
+os.makedirs("data", exist_ok=True)
+app.mount("/data", StaticFiles(directory="data"), name="data")
+app.mount("/", StaticFiles(directory="web", html=True), name="web")
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("app:app", host="127.0.0.1", port=8000, reload=True)

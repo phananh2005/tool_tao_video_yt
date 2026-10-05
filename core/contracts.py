@@ -15,7 +15,7 @@ class AIProviderContract(ABC):
     @abstractmethod
     def generate_text(self, prompt: str, expected_format: str = 'json') -> str:
         pass
-    
+
     @abstractmethod
     def generate_image(self, prompt: str, save_path: Optional[str] = None) -> str:
         pass
@@ -50,12 +50,15 @@ class VoiceoverSceneJSON:
 class VoiceoverJSON:
     script_id: int
     voiceover_scenes: List[VoiceoverSceneJSON]
+    is_synthesized: bool = False
 
 @dataclass
 class AssetSceneJSON:
     scene_number: int
     image_prompt: str
     image_path: str
+    audio_path: Optional[str] = None
+    duration_seconds: Optional[float] = None
 
 @dataclass
 class AssetJSON:

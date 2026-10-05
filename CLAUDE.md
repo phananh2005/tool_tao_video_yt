@@ -48,11 +48,12 @@ TubeChain là tool 100% local (web UI local) tự động hóa sản xuất vide
 
 ## Quy tắc Handoff
 
-1. **Giao tiếp qua data contract** — mọi agent dùng contract do `db-architect` định nghĩa. Không tự chế format riêng.
-2. **Contract bao gồm**: IdeaJSON, ScriptJSON, VoiceoverJSON, SceneAssets, AudioTrack, MetadataJSON.
-3. **Quy trình**: `planner` phân tích yêu cầu → `db-architect` tạo contract → các coder agent implement theo contract → `qa-test-engineer` test theo contract.
-4. **Xung đột contract**: nếu agent cần thay đổi contract → escalate cho `db-architect`, không tự sửa.
-5. **Không agent nào ghi file ngoài vùng sở hữu** — vi phạm phải escalate.
+1. **TUYỆT ĐỐI KHÔNG TỰ TRẢ LỜI CODE/FIX TRỰC TIẾP**. Mọi task đều phải chạy qua workflow bắt buộc: `planner` → `db-architect` (nếu có đổi schema/contract) → Coder tương ứng (`media-coder`, `web-coder`...) → `qa-test-engineer`.
+2. **Giao tiếp qua data contract** — mọi agent dùng contract do `db-architect` định nghĩa. Không tự chế format riêng.
+3. **Contract bao gồm**: IdeaJSON, ScriptJSON, VoiceoverJSON, SceneAssets, AudioTrack, MetadataJSON.
+4. **Quy trình**: `planner` phân tích yêu cầu → `db-architect` tạo contract → các coder agent implement theo contract → `qa-test-engineer` test theo contract.
+5. **Xung đột contract**: nếu agent cần thay đổi contract → escalate cho `db-architect`, không tự sửa.
+6. **Không agent nào ghi file ngoài vùng sở hữu** — vi phạm phải escalate.
 
 ## Workflow đề xuất
 
