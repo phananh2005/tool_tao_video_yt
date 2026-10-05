@@ -1,4 +1,4 @@
-﻿from dataclasses import dataclass
+from dataclasses import dataclass
 from typing import List, Optional
 from abc import ABC, abstractmethod
 
@@ -17,7 +17,7 @@ class AIProviderContract(ABC):
         pass
     
     @abstractmethod
-    def generate_image(self, prompt: str) -> str:
+    def generate_image(self, prompt: str, save_path: Optional[str] = None) -> str:
         pass
 
 @dataclass

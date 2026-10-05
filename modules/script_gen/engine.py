@@ -1,4 +1,4 @@
-﻿import json
+import json
 import re
 from typing import List
 from core.contracts import IdeaJSON, ChapterJSON, SceneJSON, ScriptJSON, AIProviderContract
@@ -36,6 +36,8 @@ class ScriptGeneratorEngine:
         
         Yêu cầu: 
         - Để video đạt chuẩn thời lượng 10-15 phút, hãy chia nội dung thành 4 đến 6 Chương (Chapters) vừa phải.
+        - Chương ĐẦU TIÊN phải luôn là "Hook & Intro" (Mở đầu thu hút, giới thiệu chủ đề).
+        - Chương CUỐI CÙNG phải luôn là "CTA & Outro" (Kết luận, kêu gọi hành động: like, share, subscribe).
         - Mỗi chương phải có mục tiêu rõ ràng và đóng góp vào mạch truyện chung.
         - TRẢ VỀ DUY NHẤT MỘT MẢNG JSON HỢP LỆ. KHÔNG BAO GỒM GIẢI THÍCH.
         
@@ -64,6 +66,8 @@ class ScriptGeneratorEngine:
         - Phải chia chương này thành 6 đến 8 phân cảnh (Scenes).
         - Mỗi cảnh kéo dài khoảng 15-20 giây.
         - `narration_outline` (dàn ý lời bình) cung cấp từ 2-4 gạch đầu dòng ngắn gọn nhưng đủ thông tin để viết lời thoại.
+        - Nếu đây là chương "Hook & Intro" (thường là Chương 1), phân cảnh đầu tiên phải mang tính thu hút, mở đầu video mạnh mẽ.
+        - Nếu đây là chương "CTA & Outro" (thường là chương cuối), phân cảnh cuối phải bao gồm lời kêu gọi hành động (like, subscribe) và kết thúc video.
         - TRẢ VỀ DUY NHẤT MỘT MẢNG JSON HỢP LỆ. KHÔNG BAO GỒM GIẢI THÍCH.
         
         Định dạng bắt buộc:
