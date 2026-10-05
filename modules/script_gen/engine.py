@@ -63,9 +63,9 @@ class ScriptGeneratorEngine:
         - Dàn ý toàn bài:\n{outline_str}
         
         YÊU CẦU CHÍNH CHO CHƯƠNG {chapter.chapter_number} ({chapter.title}):
-        - Phải chia chương này thành 6 đến 8 phân cảnh (Scenes).
-        - Mỗi cảnh kéo dài khoảng 15-20 giây.
-        - `narration_outline` (dàn ý lời bình) cung cấp từ 2-4 gạch đầu dòng ngắn gọn nhưng đủ thông tin để viết lời thoại.
+        - Phải chia chương này thành 10 đến 15 phân cảnh (Scenes) ngắn.
+        - Mỗi cảnh CHỈ KÉO DÀI khoảng 5 đến 8 giây. Việc chia nhỏ này giúp video thay đổi hình ảnh liên tục, 1 scene = 1 hình ảnh mới, tránh nhàm chán cho người xem.
+        - `narration_outline` (dàn ý lời bình) cung cấp từ 1-2 gạch đầu dòng rất ngắn gọn phù hợp với thời lượng 5-8 giây.
         - Nếu đây là chương "Hook & Intro" (thường là Chương 1), phân cảnh đầu tiên phải mang tính thu hút, mở đầu video mạnh mẽ.
         - Nếu đây là chương "CTA & Outro" (thường là chương cuối), phân cảnh cuối phải bao gồm lời kêu gọi hành động (like, subscribe) và kết thúc video.
         - TRẢ VỀ DUY NHẤT MỘT MẢNG JSON HỢP LỆ. KHÔNG BAO GỒM GIẢI THÍCH.
@@ -76,8 +76,8 @@ class ScriptGeneratorEngine:
                 "chapter_number": {chapter.chapter_number},
                 "scene_number": 0,
                 "visual_concept": "Mô tả hình ảnh B-roll",
-                "duration_seconds": 15,
-                "narration_outline": ["Dữ kiện 1", "Dữ kiện 2"]
+                "duration_seconds": 6,
+                "narration_outline": ["Dữ kiện 1"]
             }}
         ]
         Lưu ý: Luôn để scene_number = 0.

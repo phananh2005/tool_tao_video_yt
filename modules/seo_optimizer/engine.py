@@ -50,20 +50,35 @@ class SEOOptimizerEngine:
         {chapter_summaries}
         
         YÊU CẦU:
-        1. Tiêu đề (title): Dài dưới 60 ký tự, giật tít, khơi gợi tò mò.
+        1. Options (options): Trả về một mảng chứa ĐÚNG 3 LỰA CHỌN (3 option). Mỗi option là 1 bộ bao gồm:
+           - "title": Tiêu đề (dưới 60 ký tự, giật tít, khơi gợi tò mò).
+           - "thumbnail_concept": Gợi ý bối cảnh, nhân vật hoặc đồ vật chính cho ảnh bìa phù hợp với tiêu đề này.
+           - "thumbnail_text": Một dòng chữ RẤT NGẮN (2-5 từ) và CỰC KỲ TÒ MÒ, giật gân, hoặc câu hỏi để chèn thật to lên ảnh bìa này.
         2. Mô tả (description): 2-3 đoạn ngắn, cuốn hút. Có lời kêu gọi Like/Subscribe.
         3. Tags: 15-20 từ khóa thịnh hành cách nhau bằng dấu phẩy.
-        4. Thumbnail Concept (thumbnail_concept): Gợi ý bối cảnh, nhân vật hoặc đồ vật chính cho ảnh bìa.
-        5. Thumbnail Text (thumbnail_text): Một dòng chữ RẤT NGẮN (2-5 từ) và CỰC KỲ TÒ MÒ, giật gân, hoặc một câu hỏi để chèn thật to lên ảnh bìa. Dòng chữ này phải bổ trợ cho hình ảnh để hút lượt click.
-        6. Chapter Titles (chapter_titles): Mảng các chuỗi, mỗi chuỗi là tên của một chương (tương ứng với số chương truyền vào). Tên chương KHÔNG ĐƯỢC để là "Chương 1", "Chương 2". Phải dùng nội dung cụ thể của chương đó hoặc đặt một câu hỏi gây tò mò, kích thích người xem click vào (vd: "Bí mật được hé lộ?", "Sai lầm 99% mọi người mắc phải").
+        4. Chapter Titles (chapter_titles): Mảng các chuỗi, mỗi chuỗi là tên của một chương (tương ứng với số chương truyền vào). Tên chương KHÔNG ĐƯỢC để là "Chương 1", "Chương 2". Phải dùng nội dung cụ thể của chương đó hoặc đặt một câu hỏi gây tò mò, kích thích người xem click vào (vd: "Bí mật được hé lộ?").
         
         TRẢ VỀ DUY NHẤT ĐỊNH DẠNG JSON. KHÔNG MARKDOWN.
         {{
-            "title": "...",
+            "options": [
+                {{
+                    "title": "Tiêu đề 1",
+                    "thumbnail_concept": "Concept 1",
+                    "thumbnail_text": "Text 1"
+                }},
+                {{
+                    "title": "Tiêu đề 2",
+                    "thumbnail_concept": "Concept 2",
+                    "thumbnail_text": "Text 2"
+                }},
+                {{
+                    "title": "Tiêu đề 3",
+                    "thumbnail_concept": "Concept 3",
+                    "thumbnail_text": "Text 3"
+                }}
+            ],
             "description": "...",
             "tags": "...",
-            "thumbnail_concept": "...",
-            "thumbnail_text": "...",
             "chapter_titles": ["Tên chương 1", "Tên chương 2", "..."]
         }}
         """
@@ -109,6 +124,15 @@ class SEOOptimizerEngine:
         if not seo_data:
             return False
             
+        # Gộp mảng 3 option lại thành 1 chuỗi tiêu đề để hiển thị trên frontend
+        options = seo_data.get('options', [])
+        if isinstance(options, list) and len(options) > 0:
+            formatted_title = "\n".join([f"{i+1}. {opt.get('title', '')}" for i, opt in enumerate(options)])
+        else:
+            formatted_title = title
+            
+        seo_data['title'] = formatted_title
+            
         print("[Engine] Bước 3: Ghép nối dữ liệu và xuất file Text...")
         
         ai_titles = seo_data.get('chapter_titles', [])
@@ -137,32 +161,37 @@ class SEOOptimizerEngine:
             f.write(f"⏱️ CHỈ MỤC THỜI GIAN (Chapters):\n{timestamp_str}\n")
             f.write(f"🏷️ TỪ KHÓA (Tags):\n{seo_data.get('tags', '')}\n\n")
             f.write("-" * 40 + "\n")
-            f.write(f"🎨 GỢI Ý ẢNH BÌA (Thumbnail):\n")
-            f.write(f"   - Hình ảnh: {seo_data.get('thumbnail_concept', '')}\n")
-            text_val = seo_data.get('thumbnail_text', '')
-            f.write(f"   - Chữ chèn trên ảnh (Text): \"{text_val}\"\n")
+            f.write(f"🎨 GỢI Ý ẢNH BÌA (Thumbnails):\n")
+            for i, opt in enumerate(options):
+                f.write(f" [Option {i+1}]: {opt.get('title', '')}\n")
+                f.write(f"   - Hình ảnh: {opt.get('thumbnail_concept', '')}\n")
+                f.write(f"   - Chữ chèn trên ảnh (Text): \"{opt.get('thumbnail_text', '')}\"\n\n")
             
         # ==========================================
-        # BƯỚC 4: TỰ ĐỘNG VẼ THUMBNAIL LUÔN
+        # BƯỚC 4: TỰ ĐỘNG VẼ THUMBNAIL LUÔN (3 ẢNH)
         # ==========================================
-        print(f"\n[Engine] Bước 4: Yêu cầu AI vẽ luôn Thumbnail dựa trên Concept...")
-        thumbnail_prompt = seo_data.get('thumbnail_concept', '')
-        if thumbnail_prompt:
-            # Gửi lệnh cho Gemini Adapter để vẽ ảnh Thumbnail
-            thumb_path = os.path.join(project_dir, 'thumbnail_youtube.jpg')
+        print(f"\n[Engine] Bước 4: Yêu cầu AI vẽ {len(options)} Thumbnail dựa trên Concept...")
+        thumbnail_paths = []
+        for i, opt in enumerate(options):
+            thumbnail_prompt = opt.get('thumbnail_concept', '')
+            thumbnail_text = opt.get('thumbnail_text', '')
             
-            # Cấu trúc lại prompt cho việc vẽ Thumbnail
-            thumbnail_text = seo_data.get('thumbnail_text', '')
-            if thumbnail_text:
-                full_thumb_prompt = f"Hãy tạo 1 bức ảnh TỶ LỆ 16:9 sắc nét, thiết kế chuyên biệt để làm Thumbnail Youtube. Nội dung: {thumbnail_prompt}. BẮT BUỘC chèn thật to, rõ ràng dòng chữ này (có thể là tiếng Việt) lên vị trí nổi bật nhất của ảnh: \"{thumbnail_text}\"."
-            else:
-                full_thumb_prompt = f"Hãy tạo 1 bức ảnh TỶ LỆ 16:9 sắc nét, thiết kế chuyên biệt để làm Thumbnail Youtube. Nội dung: {thumbnail_prompt}."
-            
-            # Hàm sinh ảnh đã được code ở Adapter Phase 4
-            self.adapter.generate_image(full_thumb_prompt, save_path=thumb_path)
-            
-            if os.path.exists(thumb_path):
-                print(f"[Engine] => Thumbnail AI vẽ đã được lưu tại: thumbnail_youtube.jpg")
-                seo_data['thumbnail_path'] = f"data/projects/{script_id}/thumbnail_youtube.jpg"
+            if thumbnail_prompt:
+                thumb_path = os.path.join(project_dir, f'thumbnail_youtube_{i+1}.jpg')
+                
+                # Cấu trúc lại prompt cho việc vẽ Thumbnail
+                if thumbnail_text:
+                    full_thumb_prompt = f"Hãy tạo 1 bức ảnh TỶ LỆ 16:9 sắc nét, thiết kế chuyên biệt để làm Thumbnail Youtube. Nội dung: {thumbnail_prompt}. BẮT BUỘC chèn thật to, rõ ràng dòng chữ này (có thể là tiếng Việt) lên vị trí nổi bật nhất của ảnh: \"{thumbnail_text}\"."
+                else:
+                    full_thumb_prompt = f"Hãy tạo 1 bức ảnh TỶ LỆ 16:9 sắc nét, thiết kế chuyên biệt để làm Thumbnail Youtube. Nội dung: {thumbnail_prompt}."
+                
+                print(f"[Engine] Đang vẽ Thumbnail {i+1}/{len(options)}...")
+                self.adapter.generate_image(full_thumb_prompt, save_path=thumb_path)
+                
+                if os.path.exists(thumb_path):
+                    print(f"[Engine] => Thumbnail {i+1} đã được lưu tại: thumbnail_youtube_{i+1}.jpg")
+                    thumbnail_paths.append(f"data/projects/{script_id}/thumbnail_youtube_{i+1}.jpg")
+        
+        seo_data['thumbnail_paths'] = thumbnail_paths
         
         return seo_data, file_path

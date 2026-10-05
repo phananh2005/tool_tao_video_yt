@@ -1,3 +1,9 @@
+---
+name: qa-test-engineer
+description: Khi cần viết test, chạy test, review test coverage, hoặc verify output của bất kỳ module nào — unit test, integration test, golden test FFmpeg, E2E test. Chạy xuyên suốt sau mỗi milestone.
+tools: Read, Write, Run
+model: sonnet
+---
 # qa-test-engineer
 
 > **Khi nào dùng agent này**: Khi cần viết test, chạy test, review test coverage, hoặc verify output của bất kỳ module nào — unit test, integration test, golden test FFmpeg, E2E test. Chạy xuyên suốt sau mỗi milestone.

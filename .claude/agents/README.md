@@ -66,7 +66,7 @@ Bước 4: qa-test-engineer (XUYÊN SUỐT)
 ## Quy tắc an toàn
 
 - **Không chạy lệnh nguy hiểm**: rm -rf, ghi đè ngoài phạm vi.
-- **Không bypass sandbox/approval** của Codex.
+- **Không bypass sandbox/approval** của Claude Code.
 - **Không xóa dữ liệu**: tubechain.db, embeddings.json, projects/.
 - **Không sửa secret/env thật** nếu không được yêu cầu.
 - **Không DROP TABLE** hoặc xóa bảng quan trọng.
@@ -76,7 +76,7 @@ Bước 4: qa-test-engineer (XUYÊN SUỐT)
 
 ## Sandbox/Approval khuyến nghị
 
-| Agent | Codex Mode | Lý do |
+| Agent | Claude Code Mode | Lý do |
 |-------|-----------|-------|
 | db-architect | `suggest` hoặc `auto-edit` | Chỉ ghi contract/schema, an toàn |
 | idea-engine-coder | `auto-edit` | Phạm vi ghi hẹp, chỉ 1 module |
@@ -87,7 +87,7 @@ Bước 4: qa-test-engineer (XUYÊN SUỐT)
 
 ## Cách chỉnh quyền/scope
 
-1. Mở file `.codex/agents/<agent-name>.md`.
+1. Mở file `.claude/agents/<agent-name>.md`.
 2. Sửa phần **File-write scope** để thêm/bớt thư mục.
 3. Sửa phần **Safe command allowlist** để thêm/bớt lệnh.
 4. Mọi thay đổi phải đảm bảo agent không giẫm chân agent khác.
@@ -96,27 +96,27 @@ Bước 4: qa-test-engineer (XUYÊN SUỐT)
 
 ```bash
 # LUÔN bắt đầu bằng planner
-codex "Dùng agent planner: tôi muốn implement toàn bộ Phase 1 Idea Engine"
+claude "Dùng agent planner: tôi muốn implement toàn bộ Phase 1 Idea Engine"
 # → Planner xuất kế hoạch .md → user duyệt → chạy từng agent theo plan
 
 # Khởi tạo schema/contract (theo kế hoạch)
-codex "Dùng agent db-architect: thiết kế schema SQLite cho tất cả bảng, tạo data contract JSON cho 6 phase, và định nghĩa provider adapter contract"
+claude "Dùng agent db-architect: thiết kế schema SQLite cho tất cả bảng, tạo data contract JSON cho 6 phase, và định nghĩa provider adapter contract"
 
 # Implement Phase 1
-codex "Dùng agent idea-engine-coder: implement Topic Cross-Pollination với 6 content pillars"
+claude "Dùng agent idea-engine-coder: implement Topic Cross-Pollination với 6 content pillars"
 
 # Implement Phase 2
-codex "Dùng agent content-coder: implement Script Generator với timing chuẩn Hook/Intro/Body/Climax/CTA"
+claude "Dùng agent content-coder: implement Script Generator với timing chuẩn Hook/Intro/Body/Climax/CTA"
 
 # Implement Phase 4+5
-codex "Dùng agent media-coder: implement Scene Breakdown chia kịch bản thành scenes 10-30 giây"
+claude "Dùng agent media-coder: implement Scene Breakdown chia kịch bản thành scenes 10-30 giây"
 
 # Tích hợp
-codex "Dùng agent web-coder: tạo backend endpoint POST /api/phase1/brainstorm và GET /api/phase1/ideas"
+claude "Dùng agent web-coder: tạo backend endpoint POST /api/phase1/brainstorm và GET /api/phase1/ideas"
 
 # Test
-codex "Dùng agent qa-test-engineer: viết test cho Angle Deduplication Filter phủ 3 ngưỡng + edge case embeddings rỗng"
+claude "Dùng agent qa-test-engineer: viết test cho Angle Deduplication Filter phủ 3 ngưỡng + edge case embeddings rỗng"
 
 # E2E
-codex "Dùng agent qa-test-engineer: viết E2E golden test từ chủ đề thô đến MP4 + MetadataJSON dùng mock provider"
+claude "Dùng agent qa-test-engineer: viết E2E golden test từ chủ đề thô đến MP4 + MetadataJSON dùng mock provider"
 ```

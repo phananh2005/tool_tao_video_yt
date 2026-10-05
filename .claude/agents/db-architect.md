@@ -1,3 +1,9 @@
+---
+name: db-architect
+description: Khi cần thiết kế, cập nhật, hoặc review cấu trúc dữ liệu — schema SQLite, data contract JSON giữa 6 phase, provider adapter contract, embeddings format, config convention, Project Status Flow state machine. Luôn chạy agent này TRƯỚC các coder agent khác.
+tools: Read, Write, Run
+model: sonnet
+---
 # db-architect
 
 > **Khi nào dùng agent này**: Khi cần thiết kế, cập nhật, hoặc review cấu trúc dữ liệu — schema SQLite, data contract JSON giữa 6 phase, provider adapter contract, embeddings format, config convention, Project Status Flow state machine. Luôn chạy agent này TRƯỚC các coder agent khác.

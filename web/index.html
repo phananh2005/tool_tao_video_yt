@@ -324,8 +324,14 @@
                     <!-- Cột Trái: Thumbnail -->
                     <div class="bg-white p-6 rounded-lg shadow border border-gray-200 flex flex-col">
                         <h3 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">🖼️ Gợi ý Ảnh bìa (Thumbnail)</h3>
-                        <div v-if="seoData.thumbnail_path" class="mb-4 rounded-lg overflow-hidden border-2 border-dashed border-gray-300">
-                            <img :src="'/' + seoData.thumbnail_path + '?v=' + thumbnailCacheVersion" class="w-full h-auto object-cover" alt="Youtube Thumbnail">
+                        <div v-if="seoData.thumbnail_paths && seoData.thumbnail_paths.length" class="mb-4">
+                            <p class="font-bold text-gray-700 mb-2">Ảnh bìa AI vẽ tự động ({{seoData.thumbnail_paths.length}} lựa chọn):</p>
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                <div v-for="(path, idx) in seoData.thumbnail_paths" :key="idx" class="rounded-lg overflow-hidden border-2 border-gray-200">
+                                    <p class="bg-gray-100 text-center py-1 text-sm font-semibold text-gray-700">Option {{idx + 1}}</p>
+                                    <img :src="'/' + path + '?v=' + thumbnailCacheVersion" class="w-full h-auto object-cover" alt="Youtube Thumbnail">
+                                </div>
+                            </div>
                         </div>
                         <div v-else class="mb-4 flex items-center justify-center bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg h-64 text-gray-400 font-semibold">
                             Chưa có ảnh bìa
@@ -349,8 +355,8 @@
                         <h3 class="text-lg font-bold text-gray-800 mb-2 border-b pb-2">📝 Metadata YouTube</h3>
                         
                         <div>
-                            <label class="block font-bold text-sm text-gray-700 mb-1">Tiêu đề (Title):</label>
-                            <input v-model="seoData.title" class="w-full border border-gray-300 p-2 rounded font-semibold text-lg focus:ring-2 focus:ring-blue-400">
+                            <label class="block font-bold text-sm text-gray-700 mb-1">Gợi ý 3 Tiêu đề (Titles):</label>
+                            <textarea v-model="seoData.title" class="w-full border border-gray-300 p-2 h-24 rounded font-semibold text-lg focus:ring-2 focus:ring-blue-400"></textarea>
                         </div>
                         
                         <div>

@@ -1,3 +1,9 @@
+---
+name: web-coder
+description: Khi cần implement hoặc sửa backend API (Flask/FastAPI), frontend web UI (7 màn hình), hoặc tích hợp pipeline orchestration — bao gồm entry point, routing, endpoint cho từng phase, serve static/media, và giao diện người dùng.
+tools: Read, Write, Run
+model: sonnet
+---
 # web-coder
 
 > **Khi nào dùng agent này**: Khi cần implement hoặc sửa backend API (Flask/FastAPI), frontend web UI (7 màn hình), hoặc tích hợp pipeline orchestration — bao gồm entry point, routing, endpoint cho từng phase, serve static/media, và giao diện người dùng.

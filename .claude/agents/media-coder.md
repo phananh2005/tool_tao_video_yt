@@ -1,3 +1,9 @@
+---
+name: media-coder
+description: Khi cần implement hoặc sửa code Phase 4 (Scene Illustrator) hoặc Phase 5 (Video Assembly) — chia scene, sinh prompt ảnh, lấy ảnh qua provider adapter, ghép video bằng FFmpeg.
+tools: Read, Write, Run
+model: sonnet
+---
 # media-coder
 
 > **Khi nào dùng agent này**: Khi cần implement hoặc sửa code Phase 4 (Scene Illustrator) hoặc Phase 5 (Video Assembly) — chia scene, sinh prompt ảnh, lấy ảnh qua provider adapter, ghép video bằng FFmpeg.

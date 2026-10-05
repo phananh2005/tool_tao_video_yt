@@ -1,4 +1,4 @@
-Bạn là một meta-agent chuyên thiết kế và tự tạo sub-agent cho Codex (OpenAI Codex CLI).
+Bạn là một meta-agent chuyên thiết kế và tự tạo sub-agent cho Claude Code (OpenAI Claude Code CLI).
 
 Mục tiêu:
 Hãy tạo một bộ sub-agent phù hợp cho dự án sau. Bộ agent phải bám sát dự án, không chung chung, không tạo quá nhiều agent thừa.
@@ -116,7 +116,7 @@ Yêu cầu đặc thù:
 2. MỤC TIÊU TẠO SUB-AGENT
 ==================================================
 
-Hãy tạo bộ sub-agent để hỗ trợ phát triển dự án này trong Codex.
+Hãy tạo bộ sub-agent để hỗ trợ phát triển dự án này trong Claude Code.
 
 Bộ agent cần:
 - Hiểu đúng stack của dự án.
@@ -133,15 +133,15 @@ Bộ agent cần:
 3. VỊ TRÍ LƯU SUB-AGENT
 ==================================================
 
-Đây là dự án cho CODEX (OpenAI Codex CLI), không phải Claude Code. Hãy dùng cơ chế native của Codex:
+Đây là dự án cho CLAUDE CODE (OpenAI Claude Code CLI), không phải Claude Code. Hãy dùng cơ chế native của Claude Code:
 
-1. Nếu phiên bản Codex hiện tại hỗ trợ định nghĩa subagent (ví dụ thư mục .codex/agents/ hoặc cơ chế tương đương), hãy tạo thư mục:
+1. Nếu phiên bản Claude Code hiện tại hỗ trợ định nghĩa subagent (ví dụ thư mục .claude/agents/ hoặc cơ chế tương đương), hãy tạo thư mục:
 
-    .codex/agents/
+    .claude/agents/
 
-và viết file theo đúng cú pháp mà Codex đang hỗ trợ.
+và viết file theo đúng cú pháp mà Claude Code đang hỗ trợ.
 
-2. Đồng thời, vì Codex tự đọc AGENTS.md, hãy tạo/cập nhật file AGENTS.md ở gốc repo, gồm:
+2. Đồng thời, vì Claude Code tự đọc AGENTS.md, hãy tạo/cập nhật file AGENTS.md ở gốc repo, gồm:
 - Tóm tắt dự án và các ràng buộc cứng.
 - Danh sách sub-agent + khi nào dùng agent nào.
 - Quy tắc chuyển giao (handoff) giữa các agent.
@@ -165,16 +165,16 @@ Hãy tạo đúng 6 agent sau (đã được thiết kế sẵn cho dự án nà
 Tổng số agent không quá 6. Không tự thêm agent mới trừ khi phát hiện thiếu vai trò nghiêm trọng, và nếu thêm phải giải thích.
 
 ==================================================
-5. ĐỊNH DẠNG FILE SUB-AGENT (CHUẨN CODEX)
+5. ĐỊNH DẠNG FILE SUB-AGENT (CHUẨN CLAUDE CODE)
 ==================================================
 
-KHÔNG dùng frontmatter kiểu Claude Code (tools: Read,Write... / model: sonnet / "Use PROACTIVELY"). Codex quản lý quyền khác Claude:
+KHÔNG dùng frontmatter kiểu Claude Code (tools: Read,Write... / model: sonnet / "Use PROACTIVELY"). Claude Code quản lý quyền khác Claude:
 
-- Model: lấy theo cấu hình Codex hiện hành, KHÔNG ghi cứng tên model vào file agent.
+- Model: lấy theo cấu hình Claude Code hiện hành, KHÔNG ghi cứng tên model vào file agent.
 - Quyền hạn: thể hiện bằng 2 phần trong nội dung agent:
   (a) File-write scope: danh sách thư mục/file agent được phép tạo/sửa.
   (b) Safe command allowlist: danh sách lệnh shell được chạy (ví dụ: pytest, ffprobe, ffmpeg với tham số an toàn, sqlite3 chỉ SELECT, python scripts cụ thể). Mọi lệnh ngoài allowlist phải hỏi người dùng.
-- Nếu phiên bản Codex hiện tại có schema định nghĩa subagent riêng (frontmatter hoặc field riêng), hãy bám schema đó nhưng chỉ điền: name, description (mô tả khi nào dùng), phần nội dung system prompt. Nếu không chắc schema, dùng file Markdown thuần có cấu trúc rõ ràng và ghi chú trong README rằng tôi có thể chỉnh lại.
+- Nếu phiên bản Claude Code hiện tại có schema định nghĩa subagent riêng (frontmatter hoặc field riêng), hãy bám schema đó nhưng chỉ điền: name, description (mô tả khi nào dùng), phần nội dung system prompt. Nếu không chắc schema, dùng file Markdown thuần có cấu trúc rõ ràng và ghi chú trong README rằng tôi có thể chỉnh lại.
 
 Mỗi file agent phải mở đầu bằng phần mô tả ngắn "Khi nào dùng agent này" để orchestrator (hoặc tôi) chọn đúng agent.
 
@@ -208,7 +208,7 @@ Mỗi agent phải có các phần sau:
 Tất cả agent phải tuân thủ:
 
 - Không chạy lệnh nguy hiểm (rm -rf, ghi đè ngoài phạm vi sở hữu).
-- Không bypass sandbox/approval policy của Codex, không đề xuất chạy chế độ full-access không cần thiết.
+- Không bypass sandbox/approval policy của Claude Code, không đề xuất chạy chế độ full-access không cần thiết.
 - Không xóa file quan trọng, đặc biệt không xóa dữ liệu trong data/ (tubechain.db, embeddings.json, projects/).
 - Không sửa secret/env thật nếu không được yêu cầu rõ.
 - Không chạy lệnh phá hủy SQLite (DROP TABLE, xóa bảng ideas/video_links/idea_graveyard); sqlite3 trong agent chỉ dùng SELECT trừ khi tôi yêu cầu rõ.
@@ -292,7 +292,7 @@ qa-test-engineer:
 
 Hãy tạo file README cho bộ agent tại:
 
-.codex/agents/README.md
+.claude/agents/README.md
 
 README cần có:
 - Mục đích của bộ agent: chỉ dùng để PHÁT TRIỂN TubeChain, không tham gia runtime tạo video.
@@ -301,9 +301,9 @@ README cần có:
 - Workflow đề xuất: db-architect trước → idea-engine + content + media song song → web-coder → qa-test-engineer xuyên suốt.
 - Stack target (Flask/FastAPI, SQLite, embeddings.json, FFmpeg, frontend nhẹ).
 - Các ràng buộc cứng: 100% local, video cũ chỉ lưu dữ liệu, chuỗi tối đa 3 video, không TTS, dựng video đơn giản, provider adapter 2 chế độ.
-- Quy tắc an toàn + cơ chế sandbox/approval của Codex nên dùng khi chạy từng loại agent.
+- Quy tắc an toàn + cơ chế sandbox/approval của Claude Code nên dùng khi chạy từng loại agent.
 - Cách chỉnh quyền/scope nếu cần.
-- Gợi ý prompt sử dụng hằng ngày (cách gọi agent trong Codex).
+- Gợi ý prompt sử dụng hằng ngày (cách gọi agent trong Claude Code).
 
 Và đảm bảo AGENTS.md ở gốc repo (tạo mới hoặc cập nhật nếu đã có) chứa:
 - Tóm tắt dự án + ràng buộc cứng.
@@ -316,8 +316,8 @@ Và đảm bảo AGENTS.md ở gốc repo (tạo mới hoặc cập nhật nếu
 
 Sau khi tạo xong, hãy tự kiểm tra:
 
-- File có đúng đường dẫn .codex/agents/ không, AGENTS.md gốc đã đăng ký đủ agent chưa.
-- Định dạng có phải chuẩn Codex không — KHÔNG còn dấu vết frontmatter Claude Code (tools: Read,Write... / model: sonnet / "Use PROACTIVELY").
+- File có đúng đường dẫn .claude/agents/ không, AGENTS.md gốc đã đăng ký đủ agent chưa.
+- Định dạng có phải chuẩn Claude Code không — KHÔNG còn dấu vết frontmatter Claude Code (tools: Read,Write... / model: sonnet / "Use PROACTIVELY").
 - Tên agent có trùng không.
 - Mô tả "khi nào dùng" có đủ rõ để chọn agent không.
 - File-write scope có quá rộng không; agent nào ghi ngoài thư mục sở hữu là lỗi.
@@ -335,7 +335,7 @@ Hãy trả về báo cáo theo cấu trúc sau:
 
 ## Agent Creation Summary
 - Trạng thái tạo thành công hay cần thao tác thủ công.
-- Thư mục đã dùng; phiên bản Codex/cơ chế subagent đã bám theo.
+- Thư mục đã dùng; phiên bản Claude Code/cơ chế subagent đã bám theo.
 
 ## Detected/Assumed Stack
 - Backend assumptions.
@@ -356,7 +356,7 @@ Hãy trả về báo cáo theo cấu trúc sau:
 - Agent nào cần thận trọng.
 
 ## Recommended Workflow
-- Cách dùng bộ agent trong công việc hằng ngày với Codex.
+- Cách dùng bộ agent trong công việc hằng ngày với Claude Code.
 
 ## Manual Adjustments
 - Những gì tôi nên chỉnh lại thủ công.
@@ -368,12 +368,12 @@ Hãy trả về báo cáo theo cấu trúc sau:
 Nếu bạn không thể ghi file, hãy in toàn bộ nội dung của từng file theo thứ tự:
 
 1. AGENTS.md (gốc repo)
-2. .codex/agents/db-architect.md
-3. .codex/agents/idea-engine-coder.md
-4. .codex/agents/content-coder.md
-5. .codex/agents/media-coder.md
-6. .codex/agents/web-coder.md
-7. .codex/agents/qa-test-engineer.md
-8. .codex/agents/README.md
+2. .claude/agents/db-architect.md
+3. .claude/agents/idea-engine-coder.md
+4. .claude/agents/content-coder.md
+5. .claude/agents/media-coder.md
+6. .claude/agents/web-coder.md
+7. .claude/agents/qa-test-engineer.md
+8. .claude/agents/README.md
 
 Mỗi file phải được đặt trong một code block riêng và ghi rõ đường dẫn file ở dòng đầu tiên bên ngoài code block.

@@ -1,3 +1,9 @@
+---
+name: content-coder
+description: Khi cần implement hoặc sửa code Phase 2 (Script Generator), Phase 3 (Voiceover Writer), hoặc Phase 6 (SEO Optimizer) — kịch bản, voiceover text, SEO metadata, prompt templates.
+tools: Read, Write, Run
+model: sonnet
+---
 # content-coder
 
 > **Khi nào dùng agent này**: Khi cần implement hoặc sửa code Phase 2 (Script Generator), Phase 3 (Voiceover Writer), hoặc Phase 6 (SEO Optimizer) — kịch bản, voiceover text, SEO metadata, prompt templates.

@@ -1,3 +1,9 @@
+---
+name: idea-engine-coder
+description: Khi cần implement hoặc sửa code Phase 1 (Idea Engine) — brainstorm ý tưởng, Topic Cross-Pollination, Angle Deduplication Filter, Rabbit Hole Series Builder, Auto-Playlist Engine, Idea Graveyard, indexer video cũ.
+tools: Read, Write, Run
+model: sonnet
+---
 # idea-engine-coder
 
 > **Khi nào dùng agent này**: Khi cần implement hoặc sửa code Phase 1 (Idea Engine) — brainstorm ý tưởng, Topic Cross-Pollination, Angle Deduplication Filter, Rabbit Hole Series Builder, Auto-Playlist Engine, Idea Graveyard, indexer video cũ.

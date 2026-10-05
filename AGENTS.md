@@ -70,13 +70,13 @@ web-coder (tích hợp)
 qa-test-engineer (xuyên suốt, chạy sau mỗi milestone)
 ```
 
-## Gọi agent trong Codex
+## Gọi agent trong Claude Code
 
 ```bash
 # Luôn bắt đầu bằng planner
-codex "Dùng agent planner: tôi muốn implement Phase 1 Idea Engine hoàn chỉnh"
+claude "Dùng agent planner: tôi muốn implement Phase 1 Idea Engine hoàn chỉnh"
 # Sau khi duyệt kế hoạch, chạy từng agent theo plan
-codex "Dùng agent db-architect để thiết kế schema SQLite cho bảng projects và ideas"
-codex "Dùng agent idea-engine-coder để implement Topic Cross-Pollination"
-codex "Dùng agent qa-test-engineer để viết test cho dedup filter 3 ngưỡng"
+claude "Dùng agent db-architect để thiết kế schema SQLite cho bảng projects và ideas"
+claude "Dùng agent idea-engine-coder để implement Topic Cross-Pollination"
+claude "Dùng agent qa-test-engineer để viết test cho dedup filter 3 ngưỡng"
 ```

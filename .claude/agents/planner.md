@@ -1,3 +1,9 @@
+---
+name: planner
+description: Luôn chạy **đầu tiên** khi nhận yêu cầu mới từ user. Phân tích yêu cầu, xác định scope, chia nhỏ thành task, và xuất bản kế hoạch `.md` chi tiết cho các sub-agent khác thực hiện.
+tools: Read, Write, Run
+model: sonnet
+---
 # planner
 
 > **Khi nào dùng agent này**: Luôn chạy **đầu tiên** khi nhận yêu cầu mới từ user. Phân tích yêu cầu, xác định scope, chia nhỏ thành task, và xuất bản kế hoạch `.md` chi tiết cho các sub-agent khác thực hiện.
@@ -31,7 +37,7 @@ Chỉ được tạo/sửa file trong:
 plans/                         # thư mục chứa bản kế hoạch
 ```
 
-**KHÔNG được sửa**: `modules/`, `web/`, `app.py`, `tests/`, `db.py`, `embeddings.py`, `providers/`, `config.json`, `prompts/`, `data/`, `.codex/agents/`.
+**KHÔNG được sửa**: `modules/`, `web/`, `app.py`, `tests/`, `db.py`, `embeddings.py`, `providers/`, `config.json`, `prompts/`, `data/`, `.claude/agents/`.
 
 ## 5. Safe command allowlist
 
