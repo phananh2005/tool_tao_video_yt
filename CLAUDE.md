@@ -19,7 +19,7 @@ Mã nguồn hiện cũng có luồng tổng hợp giọng nói **Phase 3.5 cũ**
 - Mỗi chuỗi Rabbit Hole tối đa **3 video**.
 - Ngưỡng dedup: độ tương đồng `> 0.85` thì chặn; `0.60–0.85` thì cảnh báo; `< 0.60` thì cho qua. Dùng lại cấu hình/logic hiện có, không tạo nguồn ngưỡng trùng lặp.
 - Phase 3 tạo văn bản lời thoại, không phải tính năng TTS. Xem phần Phase 3.5 hiện có như giai đoạn cũ riêng biệt.
-- Dựng video ở mức đơn giản: ghép ảnh tĩnh tuần tự và đầu vào audio hiện có; không thêm Ken Burns, chuyển cảnh, animation hoặc nhạc nền.
+- Dựng video: cho phép thêm hiệu ứng chuyển cảnh (transitions) giữa các ảnh tĩnh để video sinh động hơn, cùng với đầu vào audio hiện có; không thêm Ken Burns, animation phức tạp hoặc nhạc nền trừ khi có yêu cầu rõ ràng.
 - Mọi thao tác AI phải đi qua provider adapter hiện có. Không khẳng định có chế độ API/thủ công nếu chưa xác minh trong mã; tuyệt đối không ghi cứng thông tin xác thực.
 - Subagent chỉ hỗ trợ phát triển mã; không phải tác nhân chạy trong pipeline tạo video lúc sử dụng ứng dụng.
 
