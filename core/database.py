@@ -2,6 +2,8 @@ import os
 import json
 import sqlite3
 import shutil
+import math
+import sys
 from typing import List, Optional
 from core.contracts import IdeaJSON
 
@@ -342,7 +344,7 @@ def get_ready_to_render_projects_with_audio():
     cursor = conn.cursor()
 
     cursor.execute("""
-        SELECT s.id, i.title, a.content
+        SELECT s.id, i.title, s.content, a.content
         FROM scripts s
         JOIN ideas i ON s.idea_id = i.id
         JOIN assets a ON s.id = a.script_id
@@ -356,27 +358,88 @@ def get_ready_to_render_projects_with_audio():
         title = r[1]
 
         try:
-            asset_data = json.loads(r[2])
+            script_data = json.loads(r[2])
+            asset_data = json.loads(r[3])
+            if not isinstance(script_data, dict) or not isinstance(asset_data, dict):
+                continue
+            expected_scenes = []
+            valid_scene_numbers = True
+            for scene in script_data.get('scenes', []):
+                scene_number = scene.get('scene_number') if isinstance(scene, dict) else None
+                if not isinstance(scene_number, int) or isinstance(scene_number, bool):
+                    valid_scene_numbers = False
+                    break
+                expected_scenes.append(scene_number)
+            if (
+                not valid_scene_numbers
+                or not expected_scenes
+                or len(set(expected_scenes)) != len(expected_scenes)
+            ):
+                continue
+
+            assets = asset_data.get('assets', [])
+            if not isinstance(assets, list) or len(assets) != len(expected_scenes):
+                continue
+
+            asset_by_scene = {}
+            valid_assets = True
+            for asset in assets:
+                if not isinstance(asset, dict):
+                    valid_assets = False
+                    break
+                scene_number = asset.get('scene_number')
+                if not isinstance(scene_number, int) or isinstance(scene_number, bool):
+                    valid_assets = False
+                    break
+                if scene_number in asset_by_scene:
+                    valid_assets = False
+                    break
+                asset_by_scene[scene_number] = asset
+
+            if not valid_assets or set(asset_by_scene) != set(expected_scenes):
+                continue
+
             timeline = []
+            for scene_number in expected_scenes:
+                asset = asset_by_scene[scene_number]
+                image_path = asset.get('image_path')
+                audio_path = asset.get('audio_path')
+                duration = asset.get('duration_seconds', 10)
+                if (
+                    not isinstance(image_path, str) or not image_path.strip()
+                    or not isinstance(audio_path, str) or not audio_path.strip()
+                    or not isinstance(duration, (int, float)) or isinstance(duration, bool)
+                    or (isinstance(duration, (int, float)) and duration > 86400)
+                    or (isinstance(duration, int) and duration > sys.float_info.max)
+                    or (isinstance(duration, float) and not math.isfinite(duration))
+                    or duration <= 0
+                ):
+                    valid_assets = False
+                    break
+                project_dir = os.path.join(os.path.dirname(DB_PATH), 'projects', str(script_id))
+                if any(
+                    not os.path.isfile(os.path.join(project_dir, os.path.basename(path)))
+                    or os.path.getsize(os.path.join(project_dir, os.path.basename(path))) <= 0
+                    for path in (image_path, audio_path)
+                ):
+                    valid_assets = False
+                    break
+                timeline.append({
+                    'scene_number': scene_number,
+                    'duration': duration,
+                    'image_path': image_path,
+                    'audio_path': audio_path,
+                })
 
-            for a_sc in asset_data.get('assets', []):
-                if 'audio_path' in a_sc:
-                    timeline.append({
-                        'scene_number': a_sc['scene_number'],
-                        'duration': a_sc.get('duration_seconds', 10),
-                        'image_path': a_sc['image_path'],
-                        'audio_path': a_sc['audio_path']
-                    })
-
-            if timeline:
+            if valid_assets:
                 timeline.sort(key=lambda x: x['scene_number'])
                 projects.append({
                     'script_id': script_id,
                     'title': title,
                     'timeline': timeline
                 })
-        except Exception as e:
-            print(f"Lỗi: {e}")
+        except (KeyError, TypeError, ValueError) as e:
+            print(f"Lỗi parse render inputs cho script {script_id}: {e}")
 
     return projects
 

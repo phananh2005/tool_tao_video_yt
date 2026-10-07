@@ -37,7 +37,9 @@ class FakeAdapter(AIProviderContract):
         if "voiceover" in lower or "lời thoại" in lower or "spoken" in lower or "lời bình" in lower:
             return '[{"scene_number": 1, "spoken_text": "Hello from golden path"}]'
         if "seo" in lower or "thumbnail" in lower:
-            return '{"title":"Golden SEO","description":"desc","tags":"t1","thumbnail_concept":"thumb"}'
+            return ('{"options":[{"title":"Golden SEO","thumbnail_concept":"thumb",'
+                    '"thumbnail_text":"Look"}],"description":"desc","tags":"t1",'
+                    '"chapter_titles":["Chapter One"]}')
         # Default: idea generation (prompt contains "ý tưởng" / idea keywords)
         return '[{"title":"Golden Idea","topics":["ai","test"],"rabbit_hole_series":false,"part_number":1,"summary":"Golden summary"}]'
 
@@ -141,7 +143,7 @@ def test_golden_path_phase1_to_phase6():
          patch("os.makedirs"), \
          patch("builtins.open", mock_open()):
         seo_data, file_path = seo_engine.format_upload_info(script_id, idea.title, asdict(script), asset_dict)
-    assert seo_data["title"] == "Golden SEO"
+    assert seo_data["title"] == "1. Golden SEO"
     save_seo_metadata(script_id, seo_data)
 
     # --- Final DB verification ---

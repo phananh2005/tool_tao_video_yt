@@ -58,6 +58,8 @@ env.bak/
 venv.bak/
 
 # TubeChain Specific
+.claude/state/current-task.md
+.claude/state/progress.md
 data/
 !data/.keep
 data/chrome_profile/
