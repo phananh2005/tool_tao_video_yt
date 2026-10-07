@@ -1,19 +1,19 @@
 ---
 name: tdd-playbook
-description: Apply a focused Red-Green-Refactor test-first loop to TubeChain behavior changes and verify relevant pytest coverage.
+description: Áp dụng vòng lặp Red-Green-Refactor cho thay đổi hành vi TubeChain và xác minh bằng pytest phù hợp.
 ---
 
-# TDD Playbook — Red, Green, Refactor
+# Quy trình TDD — Red, Green, Refactor
 
-Use for behavior changes, bug fixes and new logic. Documentation/configuration-only changes can use format/schema validation instead of application unit tests.
+Dùng cho thay đổi hành vi, sửa lỗi và logic mới. Thay đổi chỉ gồm tài liệu/cấu hình có thể dùng kiểm tra format/schema thay cho unit test ứng dụng.
 
-1. **Red:** Read existing tests and contracts. Add or adjust the smallest test expressing expected behavior. Run it and confirm failure is relevant to missing/incorrect behavior. If it cannot run before implementation, state why; never claim an observed Red that did not happen.
-2. **Green:** Implement the smallest coherent change that satisfies the test while preserving public contracts unless a design handoff approves a change.
-3. **Refactor:** Remove duplication and improve clarity without changing behavior. Keep tests green.
-4. **Verify:** Run the focused test again, then relevant module/suite tests. Report commands and actual outcomes, including failures.
+1. **Red:** Đọc test và contract hiện có. Thêm/sửa test nhỏ nhất mô tả hành vi mong đợi. Chạy test, xác nhận lỗi đúng do hành vi còn thiếu/sai. Nếu không thể chạy trước khi implement, nêu lý do; không được nói đã quan sát Red nếu chưa chạy.
+2. **Green:** Viết thay đổi nhỏ nhất, nhất quán để test pass; giữ public contract trừ khi có bàn giao thiết kế duyệt đổi.
+3. **Refactor:** Xóa trùng lặp, làm rõ code mà không đổi hành vi; giữ test pass.
+4. **Xác minh:** Chạy lại test tập trung rồi test module/suite liên quan. Báo lệnh và kết quả thật, kể cả thất bại.
 
-TubeChain test guidance:
-- Use isolated fixtures and temporary SQLite databases. Never clear or replace `data/tubechain.db` to make tests pass.
-- When changing dedup, cover `>0.85`, exactly `0.85`, `0.60`, and below `0.60`; when changing Rabbit Hole behavior, cover the three-video cap.
-- Test Phase 3 voiceover text separately from existing Phase 3.5 synthesis.
-- A `PostToolUse` hook is advisory: it cannot undo edits or prove Red-Green-Refactor occurred. The developer remains responsible for the TDD process.
+Lưu ý riêng TubeChain:
+- Dùng fixture cô lập và SQLite tạm. Không xóa hoặc thay `data/tubechain.db` để làm test pass.
+- Khi sửa dedup, kiểm tra `>0.85`, đúng `0.85`, `0.60` và dưới `0.60`; khi sửa Rabbit Hole, kiểm tra giới hạn ba video.
+- Test văn bản voiceover Phase 3 riêng với tổng hợp giọng nói Phase 3.5 hiện có.
+- Hook `PostToolUse` chỉ đưa lời nhắc: không thể hoàn tác edit hoặc chứng minh đã thực hiện Red-Green-Refactor. Developer chịu trách nhiệm quy trình TDD.

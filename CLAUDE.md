@@ -1,68 +1,68 @@
-# TubeChain — Project Guide for Claude Code
+# TubeChain — Hướng dẫn dự án cho Claude Code
 
-## Project snapshot
-TubeChain is a local-first YouTube video-production tool. The checked-in application currently uses Python + FastAPI (`app.py`), SQLite (`core/database.py`), static web assets (`web/`), pipeline modules under `modules/`, and pytest tests under `tests/`. FFmpeg is used for basic video assembly. Confirm dependencies and commands from project files before assuming them; do not invent setup instructions.
+## Tổng quan dự án
+TubeChain là công cụ sản xuất video YouTube theo hướng ưu tiên chạy tại máy người dùng. Mã nguồn hiện dùng Python + FastAPI (`app.py`), SQLite (`core/database.py`), giao diện tĩnh trong `web/`, các module pipeline trong `modules/` và kiểm thử pytest trong `tests/`. FFmpeg dùng để ghép video cơ bản. Trước khi giả định dependency hay lệnh chạy, hãy xác minh từ file trong repo; không tự bịa hướng dẫn cài đặt.
 
-The product pipeline is:
-1. **Idea Engine** — brainstorm, deduplication, Rabbit Hole planning.
-2. **Script Generator** — structured script and timing.
-3. **Voiceover Writer** — spoken-text generation only.
-4. **Scene Illustrator** — scene breakdown, image prompts/assets.
-5. **Video Assembler** — simple sequential static-image assembly.
-6. **SEO Optimizer** — title, description, tags, chapters and thumbnail concept.
+Pipeline sản phẩm gồm:
+1. **Idea Engine** — lên ý tưởng, loại trùng lặp, lập chuỗi Rabbit Hole.
+2. **Script Generator** — tạo kịch bản có cấu trúc và thời lượng.
+3. **Voiceover Writer** — chỉ tạo lời thoại dạng văn bản.
+4. **Scene Illustrator** — chia cảnh, tạo prompt/ảnh minh họa.
+5. **Video Assembler** — ghép ảnh tĩnh tuần tự, đơn giản.
+6. **SEO Optimizer** — tạo tiêu đề, mô tả, thẻ, chương và ý tưởng thumbnail.
 
-The current implementation also has a **legacy Phase 3.5 voice synthesis** path. Keep that distinct from Phase 3 text generation; do not silently remove or extend either behavior.
+Mã nguồn hiện cũng có luồng tổng hợp giọng nói **Phase 3.5 cũ**. Hãy phân biệt luồng này với việc tạo văn bản lời thoại ở Phase 3; không tự ý xóa hoặc mở rộng hành vi nào trong hai phần.
 
-## Hard product constraints
-- Keep the app local: local UI/API and SQLite; do not add cloud DB, deployment or remote storage.
-- Historical videos are represented by text/metadata/topics/embeddings only; do not retain old video media as history.
-- Rabbit Hole groups are capped at **3 videos**.
-- Dedup thresholds: similarity `> 0.85` blocks; `0.60–0.85` warns; `< 0.60` passes. Reuse existing configuration/logic rather than duplicating thresholds.
-- Phase 3 writes voiceover text; it is not a TTS feature. Treat the existing Phase 3.5 implementation as a separate legacy stage.
-- Keep video assembly intentionally simple: sequential static images and the existing supported audio input; no Ken Burns, transitions, animation, or background-music feature.
-- Keep AI calls behind the existing provider-adapter boundary. Do not claim API/manual modes exist unless confirmed in code; never hardcode credentials.
-- Development subagents assist code work only; they are not runtime actors in the video-production pipeline.
+## Ràng buộc sản phẩm bắt buộc
+- Giữ ứng dụng chạy tại máy: giao diện/API cục bộ và SQLite; không tự thêm cloud DB, triển khai từ xa hoặc lưu trữ từ xa.
+- Dữ liệu lịch sử video chỉ gồm văn bản/metadata/chủ đề/embeddings; không giữ media video cũ làm dữ liệu lịch sử.
+- Mỗi chuỗi Rabbit Hole tối đa **3 video**.
+- Ngưỡng dedup: độ tương đồng `> 0.85` thì chặn; `0.60–0.85` thì cảnh báo; `< 0.60` thì cho qua. Dùng lại cấu hình/logic hiện có, không tạo nguồn ngưỡng trùng lặp.
+- Phase 3 tạo văn bản lời thoại, không phải tính năng TTS. Xem phần Phase 3.5 hiện có như giai đoạn cũ riêng biệt.
+- Dựng video ở mức đơn giản: ghép ảnh tĩnh tuần tự và đầu vào audio hiện có; không thêm Ken Burns, chuyển cảnh, animation hoặc nhạc nền.
+- Mọi thao tác AI phải đi qua provider adapter hiện có. Không khẳng định có chế độ API/thủ công nếu chưa xác minh trong mã; tuyệt đối không ghi cứng thông tin xác thực.
+- Subagent chỉ hỗ trợ phát triển mã; không phải tác nhân chạy trong pipeline tạo video lúc sử dụng ứng dụng.
 
-## Routing and handoffs
-Use subagents when they add value; do not force a multi-agent chain for trivial edits.
+## Định tuyến và bàn giao
+Chỉ dùng subagent khi chúng tạo giá trị; không ép mọi thay đổi nhỏ đi qua nhiều agent.
 
-| Agent | Model alias | Responsibility |
+| Agent | Bí danh model | Trách nhiệm |
 |---|---|---|
-| `youtube-strategist` | `opus` | YouTube audience/content strategy for ideas, angle, hooks, retention, series, titles, thumbnails and SEO. Provides content requirements and measurable editorial criteria; does not define technical contracts or write code. |
-| `prompt-engineer` | `sonnet` | Design/review prompt templates and deterministic prompt-output evaluations for the existing adapter flow. Does not make live provider calls or silently change shared contracts. |
-| `architect` | `opus` | Non-trivial requirements/design, shared data contracts, SQLite schema/migrations, cross-phase decisions and acceptance criteria. Does not implement application code. |
-| `developer` | `sonnet` | Implement a clear request or approved design, reuse existing code, follow TDD for behavior changes, run relevant checks. |
-| `qa-reviewer` | `opus` | Independent diff review, invariant/security/regression checks and test verification; normally reports findings rather than changing production code. |
+| `youtube-strategist` | `opus` | Chiến lược khán giả/nội dung YouTube: ý tưởng, góc tiếp cận, hook, duy trì người xem, chuỗi, tiêu đề, thumbnail và SEO. Đưa ra yêu cầu nội dung cùng tiêu chí đánh giá; không thiết kế contract kỹ thuật hoặc viết code. |
+| `prompt-engineer` | `sonnet` | Thiết kế/đánh giá prompt template và cách kiểm thử đầu ra theo adapter hiện có. Không gọi provider trực tiếp hoặc tự ý đổi contract dùng chung. |
+| `architect` | `opus` | Thiết kế/yêu cầu không tầm thường, data contract dùng chung, schema/migration SQLite, quyết định liên phase và tiêu chí nghiệm thu. Không implement mã ứng dụng. |
+| `developer` | `sonnet` | Thực thi yêu cầu rõ ràng hoặc thiết kế đã thống nhất, tái sử dụng code, làm TDD cho thay đổi hành vi và chạy kiểm tra liên quan. |
+| `qa-reviewer` | `opus` | Review độc lập diff, ràng buộc, bảo mật, regression và kiểm thử; thường báo lỗi thay vì sửa code sản phẩm. |
 
-In this environment, the user-configured runtime maps `opus` to Gemini 3.1 Pro and `sonnet` to Gemini 3.8 Flash. Keep the documented aliases in subagent frontmatter; do not replace them with guessed provider-specific IDs.
+Trong runtime của người dùng, alias `opus` ánh xạ tới Gemini 3.1 Pro và `sonnet` ánh xạ tới Gemini 3.8 Flash. Giữ alias này trong frontmatter; không thay bằng model ID của provider tự suy đoán.
 
-Routing by task type:
-- **AI-generated content/product behavior:** `youtube-strategist` defines audience/content goals and acceptance criteria → `architect` translates them into technical design/contracts → `prompt-engineer` drafts or evaluates prompt behavior against the approved contract → `developer` implements → `qa-reviewer` independently verifies.
-- **Prompt-only change with stable output contract:** `prompt-engineer` → `developer` (tests) → `qa-reviewer` when risk warrants.
-- **Technical/schema/cross-phase work:** `architect` (when design is non-trivial) → `developer` → `qa-reviewer`.
-- **Small isolated fix:** `developer` may proceed directly with focused tests; involve other agents only where they add value.
+Định tuyến theo loại việc:
+- **Tính năng nội dung/sản phẩm có AI sinh:** `youtube-strategist` xác định mục tiêu nội dung và tiêu chí → `architect` chuyển thành thiết kế/contract kỹ thuật → `prompt-engineer` soạn hoặc đánh giá prompt theo contract đã duyệt → `developer` implement → `qa-reviewer` kiểm tra độc lập.
+- **Chỉ đổi prompt, contract đầu ra không đổi:** `prompt-engineer` → `developer` (kèm test) → `qa-reviewer` nếu mức rủi ro cần review.
+- **Thay đổi kỹ thuật/schema/liên phase:** `architect` (nếu thiết kế không tầm thường) → `developer` → `qa-reviewer`.
+- **Sửa nhỏ, phạm vi hẹp:** `developer` có thể làm trực tiếp với test tập trung; chỉ gọi thêm agent khi có ích.
 
-`youtube-strategist` owns content strategy, not technical architecture. `prompt-engineer` owns prompt design/evaluation, not database/API contracts. Shared contract changes always return to `architect` before implementation proceeds. The two content-focused agents are development-time specialists, never runtime participants in video creation.
+`youtube-strategist` phụ trách chiến lược nội dung, không quyết định kiến trúc kỹ thuật. `prompt-engineer` phụ trách prompt/đánh giá prompt, không quyết định contract DB/API. Mọi đổi contract dùng chung phải được chuyển lại `architect` trước khi implement. Hai agent nội dung chỉ hỗ trợ lúc phát triển, không tham gia runtime tạo video.
 
-## Engineering workflow
-1. Read the relevant source, callers, tests, and any design handoff; identify verified behavior before changing it.
-2. Run skill `reuse-scan` before creating a new helper, route, schema, component, or repeated behavior.
-3. For behavior changes and bugs, follow `tdd-playbook`: Red (observe the relevant failing test when practical) → Green → Refactor → verification. Do not claim a test was run if it was not.
-4. Use `debug-flow` for reproducible failures. Use `task-state-init` and `progress-tracker` for substantial tracked work, not trivial edits.
-5. Run focused tests first, then the broader affected suite. Report exact commands, results, and any checks not run.
-6. Review the diff for scope creep, contract drift, accidental data/media deletion, credentials, and unrelated changes.
+## Quy trình kỹ thuật
+1. Đọc source, nơi gọi, test và thiết kế liên quan; xác minh hành vi thật trước khi sửa.
+2. Dùng skill `reuse-scan` trước khi tạo helper, route, schema, component hoặc hành vi lặp lại.
+3. Với thay đổi hành vi và sửa lỗi, làm theo `tdd-playbook`: Red (chạy test thất bại liên quan nếu khả thi) → Green → Refactor → xác minh. Không được nói đã chạy test nếu chưa chạy.
+4. Dùng `debug-flow` cho lỗi có thể tái hiện. Dùng `task-state-init` và `progress-tracker` cho việc lớn cần theo dõi, không dùng cho sửa vặt.
+5. Chạy test liên quan hẹp trước, sau đó mở rộng theo phạm vi ảnh hưởng. Báo chính xác lệnh, kết quả và các kiểm tra chưa chạy.
+6. Review diff để tránh mở rộng phạm vi, lệch contract, xóa nhầm data/media, lộ thông tin xác thực hoặc thay đổi không liên quan.
 
-## Safety and data handling
-- Never delete or reinitialize `data/tubechain.db` or user media to make a test pass.
-- Use temporary databases/media fixtures for tests. Keep destructive operations within the explicitly requested project scope and inspect targets first.
-- Do not commit, force-push, deploy, or publish unless the user explicitly asks.
-- Hooks in `.claude/settings.json` are narrow defense-in-depth. The PreToolUse guard blocks selected obvious destructive shell commands; it is not a complete shell parser or sandbox. The PostToolUse TDD reminder is advisory and cannot undo or block a completed edit.
-- Do not modify `.claude/settings.local.json` or user/global Claude Code configuration unless explicitly requested.
+## An toàn và xử lý dữ liệu
+- Không xóa hoặc khởi tạo lại `data/tubechain.db` hay media người dùng để làm test pass.
+- Dùng DB/media fixture tạm cho test. Chỉ thao tác phá hủy trong đúng phạm vi người dùng yêu cầu và sau khi kiểm tra target.
+- Không commit, force-push, triển khai hoặc publish nếu người dùng chưa yêu cầu rõ.
+- Hook trong `.claude/settings.json` chỉ là lớp phòng vệ bổ sung có phạm vi hẹp. PreToolUse chặn một số lệnh phá hủy rõ ràng, không thay thế parser shell đầy đủ hay sandbox. PostToolUse TDD chỉ nhắc sau thao tác, không thể hoàn tác hoặc chặn edit đã xong.
+- Không sửa `.claude/settings.local.json` hoặc cấu hình Claude Code cấp người dùng/toàn cục nếu chưa được yêu cầu rõ.
 
-## Framework files
-- Project-specific subagents: `.claude/agents/`
-- Loadable skills: `.claude/skills/<skill-name>/SKILL.md`
-- Hook configuration and scripts: `.claude/settings.json`, `.claude/hooks/`
-- Reusable state templates: `.claude/state/_template/`
-- Product overview: `README.md`; detailed product/legacy context: `system-description.md` (verify against implementation).
-- Agent harness inventory and task workflows: [`docs/agent/README.md`](docs/agent/README.md) and [`docs/agent/workflows.md`](docs/agent/workflows.md).
+## File của framework
+- Subagent riêng dự án: `.claude/agents/`
+- Skill có thể nạp: `.claude/skills/<skill-name>/SKILL.md`
+- Cấu hình và script hook: `.claude/settings.json`, `.claude/hooks/`
+- Template state có thể dùng lại: `.claude/state/_template/`
+- Tổng quan sản phẩm: `README.md`; mô tả sản phẩm/luồng cũ chi tiết: `system-description.md` (đối chiếu với implementation).
+- Bản đồ harness và luồng công việc: [`docs/agent/README.md`](docs/agent/README.md), [`docs/agent/workflows.md`](docs/agent/workflows.md).

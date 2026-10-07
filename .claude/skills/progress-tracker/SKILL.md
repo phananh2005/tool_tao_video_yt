@@ -1,12 +1,12 @@
 ---
 name: progress-tracker
-description: Update TubeChain task checklists and append concise progress or verification notes while preserving existing state history.
+description: Cập nhật checklist task TubeChain và nối ghi chú tiến độ/xác minh ngắn gọn, giữ nguyên lịch sử state.
 ---
 
-# Track task progress
+# Theo dõi tiến độ task
 
-1. Read `.claude/state/current-task.md` and `.claude/state/progress.md` before updating them.
-2. Tick a checklist item only after completing and verifying it. Do not mark tests, reviews, or handoffs complete based on intention.
-3. Append a dated entry to `progress.md` with the completed work and its verification result. Record failures, blockers and skipped checks plainly.
-4. If scope changes, update the goal/checklist transparently; do not silently remove incomplete items.
-5. Keep the log chronological, brief, factual, and free of secrets or copied command output. Do not create state files for trivial work unless requested.
+1. Đọc `.claude/state/current-task.md` và `.claude/state/progress.md` trước khi sửa.
+2. Chỉ đánh dấu hoàn tất sau khi bước đó đã làm và xác minh. Không đánh dấu test, review hoặc bàn giao xong chỉ vì dự định sẽ làm.
+3. Nối một dòng có ngày giờ vào `progress.md`, nêu việc hoàn tất và kết quả xác minh. Ghi rõ lỗi, blocker và phần bỏ qua.
+4. Nếu scope thay đổi, cập nhật minh bạch mục tiêu/checklist; không lặng lẽ xóa mục chưa xong.
+5. Giữ log theo thứ tự thời gian, ngắn, đúng sự thật, không chứa secret hoặc output lệnh nguyên văn. Không tạo state file cho việc nhỏ nếu không được yêu cầu.

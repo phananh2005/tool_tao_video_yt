@@ -336,16 +336,21 @@ def synthesize_voice_scene(script_id: int, scene_number: int, req: SynthesizeSce
 def generate_assets(script_id: int):
     conn = get_conn()
     cursor = conn.cursor()
-    cursor.execute("SELECT is_synthesized FROM voiceovers WHERE script_id = ?", (script_id,))
+    cursor.execute("SELECT is_synthesized, content FROM voiceovers WHERE script_id = ?", (script_id,))
     row = cursor.fetchone()
     conn.close()
     if not row or row[0] != 1:
         raise HTTPException(status_code=400, detail="Cần tổng hợp âm thanh (Phase 3.5) trước khi vẽ hình!")
     script_dict = get_script(script_id)
     try:
+        voiceover_dict = json.loads(row[1])
         adapter = GeminiWebAdapter()
         engine = SceneIllustratorEngine(adapter=adapter)
-        asset_obj = engine.generate_assets(script_id, script_dict)
+        asset_obj = engine.generate_assets(
+            script_id,
+            script_dict,
+            voiceover_dict.get('voiceover_scenes', []),
+        )
         save_asset(script_id, asset_obj)
         return {"status": "success"}
     except HTTPException:

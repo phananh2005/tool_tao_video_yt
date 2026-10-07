@@ -1,15 +1,15 @@
 ---
 name: reuse-scan
-description: Search TubeChain code, contracts, tests, and UI for existing behavior before introducing a helper, route, schema, component, or pipeline implementation.
+description: Tìm hành vi có sẵn trong code, contract, test và UI của TubeChain trước khi thêm helper, route, schema, component hoặc pipeline mới.
 ---
 
-# Reuse scan
+# Quét khả năng tái sử dụng
 
-Before adding a function, class, route, data contract, utility, UI component, or repeated behavior:
+Trước khi thêm function, class, route, data contract, utility, UI component hoặc hành vi lặp lại:
 
-1. Identify the responsibility and likely owning module. Search relevant paths with `Grep`/`Glob` (or `rg` via Bash where appropriate); exclude `.git/`, `data/`, caches, generated files, and virtual environments.
-2. Search both exact names and equivalent behavior. Check `core/contracts.py` for types, `core/database.py` for persistence, `modules/` for phase logic, `app.py` for routes, `web/` for UI conventions, and `tests/` for expected behavior.
-3. Read matching implementations, callers and tests. A name match alone does not establish reuse suitability.
-4. Extend existing behavior where it fits. For shared contract/schema changes, obtain an Architect handoff rather than silently changing formats.
-5. If no suitable implementation exists, add the smallest abstraction in its owning module and test it. Avoid generic utilities with one opaque caller.
-6. In the implementation summary, identify reused code or briefly state that no suitable implementation was found.
+1. Xác định trách nhiệm và module sở hữu phù hợp. Dùng `Grep`/`Glob` (hoặc `rg` qua Bash khi phù hợp) để tìm đúng thư mục; loại `.git/`, `data/`, cache, file sinh tự động và virtual environment khỏi phạm vi.
+2. Tìm cả tên chính xác lẫn hành vi tương tự. Kiểm tra `core/contracts.py` về kiểu dữ liệu, `core/database.py` về persistence, `modules/` về logic phase, `app.py` về route, `web/` về quy ước UI và `tests/` về hành vi kỳ vọng.
+3. Đọc implementation, nơi gọi và test của kết quả tìm được. Trùng tên không đồng nghĩa có thể dùng lại.
+4. Mở rộng code hiện có nếu phù hợp. Với contract/schema dùng chung, xin bàn giao từ Architect thay vì tự đổi format.
+5. Nếu không có phần phù hợp, tạo abstraction nhỏ nhất trong module sở hữu và viết test. Tránh utility quá tổng quát chỉ có một nơi gọi khó hiểu.
+6. Trong báo cáo implementation, nêu code đã tái sử dụng hoặc nói ngắn gọn rằng không tìm thấy phần phù hợp.

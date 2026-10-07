@@ -1,13 +1,13 @@
 ---
 name: debug-flow
-description: Diagnose a reproducible TubeChain bug or failing test systematically before changing implementation code.
+description: Chẩn đoán lỗi TubeChain có thể tái hiện hoặc test thất bại theo từng bước trước khi sửa code.
 argument-hint: [failure-or-test]
 ---
 
-# Debug flow: reproduce, isolate, diagnose, fix
+# Quy trình debug: tái hiện, cô lập, chẩn đoán, sửa
 
-1. **Reproduce:** Capture the exact error, input, state and command. Create or identify a focused regression test. Use temporary SQLite databases and fixtures; do not risk the real database or user media.
-2. **Isolate:** Narrow the failure to a route, contract, SQLite operation, phase module, frontend behavior, provider adapter, or FFmpeg invocation. Run the smallest failing test.
-3. **Diagnose:** Trace callers and data; establish the root cause from evidence. Check edge cases and possible implementation/documentation/schema drift.
-4. **Fix:** Make the smallest root-cause fix and add/update regression coverage. Follow `tdd-playbook` where applicable.
-5. **Verify:** Re-run the reproducer, affected test module and broader tests as appropriate. Report exact results and remaining uncertainty.
+1. **Tái hiện:** Ghi nhận lỗi, input, trạng thái và lệnh chính xác. Tạo hoặc tìm regression test tập trung. Dùng SQLite tạm và fixture; không gây rủi ro cho DB thật hoặc media người dùng.
+2. **Cô lập:** Thu hẹp lỗi về route, contract, thao tác SQLite, module phase, frontend, provider adapter hoặc lệnh FFmpeg. Chạy test thất bại nhỏ nhất.
+3. **Chẩn đoán:** Lần theo nơi gọi và dữ liệu; xác định nguyên nhân gốc bằng bằng chứng. Kiểm tra giá trị biên và khả năng tài liệu/schema lệch implementation.
+4. **Sửa:** Thực hiện thay đổi nhỏ nhất xử lý nguyên nhân; thêm/sửa regression test. Áp dụng `tdd-playbook` khi phù hợp.
+5. **Xác minh:** Chạy lại lỗi tái hiện, test module liên quan và test rộng hơn nếu cần. Báo đúng kết quả và phần còn chưa chắc chắn.

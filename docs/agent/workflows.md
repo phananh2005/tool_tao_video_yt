@@ -1,108 +1,108 @@
-# TubeChain AI Development Workflows
+# Quy trình phát triển AI — TubeChain
 
-Use this guide with the project constraints in [`CLAUDE.md`](../../CLAUDE.md) and the repository evidence in [`README.md`](README.md). These are development-time workflows; subagents do not participate in the runtime video pipeline.
+Dùng tài liệu này cùng ràng buộc dự án trong [`CLAUDE.md`](../../CLAUDE.md) và bằng chứng repository trong [`README.md`](README.md). Đây là quy trình hỗ trợ phát triển; subagent không tham gia runtime tạo video.
 
-## Agent roles and boundaries
+## Vai trò và ranh giới agent
 
-| Role | Best fit | Boundary / handoff |
+| Vai trò | Khi phù hợp | Ranh giới / bàn giao |
 |---|---|---|
-| `youtube-strategist` | Audience/content goals, idea differentiation, hooks, retention, video-series sequencing and YouTube packaging requirements. | Provides editorial recommendations and acceptance criteria; does not define technical schemas or promise algorithmic outcomes. |
-| `prompt-engineer` | Prompt templates, prompt construction and deterministic tests/evals for generated content. | Inspects the current engine, adapter, parser and contract. Does not make live provider calls or silently change contracts. |
-| `architect` | Non-trivial technical design, API/data contracts, SQLite schema/migration and cross-phase changes. | Reports verified behavior, risks and acceptance criteria; hands off a design for implementation. Skip for trivial localized changes. |
-| `developer` | Python/FastAPI, SQLite, frontend, pipeline and FFmpeg implementation. | Reuses existing code, tests behavior changes, runs focused checks and reports actual outcomes. |
-| `qa-reviewer` | Independent diff review for correctness, security, invariants, regression and test quality. | Reports actionable evidence; normally does not modify production code. |
+| `youtube-strategist` | Mục tiêu khán giả/nội dung, tạo khác biệt cho ý tưởng, hook, giữ chân, thứ tự chuỗi và yêu cầu đóng gói YouTube. | Đưa ra tư vấn biên tập và tiêu chí nghiệm thu; không định nghĩa schema kỹ thuật hoặc hứa hẹn kết quả thuật toán. |
+| `prompt-engineer` | Prompt template, cách tạo prompt và test/eval xác định cho nội dung sinh tự động. | Kiểm tra engine, adapter, parser và contract hiện có. Không gọi provider thật hoặc âm thầm đổi contract. |
+| `architect` | Thiết kế kỹ thuật không tầm thường, contract API/data, schema/migration SQLite và thay đổi liên phase. | Báo hành vi đã xác minh, rủi ro, tiêu chí nghiệm thu; bàn giao thiết kế để implement. Bỏ qua với sửa nhỏ, cục bộ. |
+| `developer` | Implement Python/FastAPI, SQLite, frontend, module pipeline và FFmpeg. | Dùng lại code, test thay đổi hành vi, chạy kiểm tra tập trung, báo kết quả thật. |
+| `qa-reviewer` | Review diff độc lập về tính đúng, bảo mật, ràng buộc, hồi quy và chất lượng test. | Báo bằng chứng có thể hành động; thông thường không tự sửa code sản phẩm. |
 
-The checked-in agent files declare `model: opus` or `model: sonnet`. The root guide documents the user's runtime mapping (`opus` → Gemini 3.1 Pro; `sonnet` → Gemini 3.8 Flash); do not replace aliases with guessed provider-specific IDs.
+Các agent khai báo `model: opus` hoặc `model: sonnet`. Hub dự án ghi runtime người dùng ánh xạ `opus` → Gemini 3.1 Pro và `sonnet` → Gemini 3.8 Flash; không thay alias bằng provider ID tự suy đoán.
 
-## Route work by task type
+## Định tuyến theo loại việc
 
-### Research / repo understanding
+### Khảo sát / hiểu repository
 
-1. Use read-only search and read the closest source, callers and tests.
-2. Record `path:line` evidence; distinguish observed behavior, documentation claims, inference and unknowns.
-3. Do not inspect local settings, secrets, browser profiles, databases, user media or unrelated logs.
-4. If the user wants a research deliverable, summarize findings, gaps, confidence and safe next steps before suggesting edits.
+1. Dùng tìm kiếm chỉ-đọc, đọc source, nơi gọi và test gần nhất.
+2. Ghi bằng chứng `path:line`; phân biệt hành vi quan sát được, nội dung tài liệu, suy luận và điều chưa biết.
+3. Không đọc local settings, secret, browser profile, database, media người dùng hoặc log không liên quan.
+4. Nếu người dùng yêu cầu deliverable nghiên cứu, tóm tắt phát hiện, khoảng trống, độ tin cậy và bước an toàn tiếp theo trước khi đề nghị sửa.
 
-### Content/product design
+### Thiết kế nội dung/sản phẩm
 
-For features affecting ideas, scripts, voiceover language, scenes, thumbnails, SEO or publishing metadata:
+Với tính năng tác động tới ý tưởng, kịch bản, lời thoại, cảnh, thumbnail, SEO hoặc metadata xuất bản:
 
-1. `youtube-strategist` defines the creator/audience goal and measurable editorial acceptance criteria.
-2. `architect` translates approved content requirements into technical scope/contracts if phase boundaries or persisted/API data are affected.
-3. `prompt-engineer` proposes prompt changes against the existing parser/output shape and creates deterministic mock-based test cases.
-4. `developer` implements only after the contract is clear; `qa-reviewer` verifies the diff and tests.
+1. `youtube-strategist` xác định mục tiêu creator/khán giả và tiêu chí biên tập có thể đánh giá.
+2. Nếu ranh giới phase hoặc dữ liệu lưu/API bị ảnh hưởng, `architect` chuyển yêu cầu nội dung thành phạm vi kỹ thuật/contract.
+3. `prompt-engineer` đề xuất thay đổi prompt theo parser/shape đầu ra hiện tại và test mẫu xác định bằng mock.
+4. `developer` chỉ implement khi contract đã rõ; `qa-reviewer` kiểm tra độc lập diff và test.
 
-For a prompt-only change with a stable contract, skip `architect` unless code inspection reveals a contract/schema change. Editorial guidance is not evidence of guaranteed views, CTR, retention or ranking. Require fact-checking/human approval where the content warrants it.
+Nếu chỉ đổi prompt, contract ổn định, có thể bỏ qua `architect` trừ khi kiểm tra code phát hiện đổi schema/contract. Tư vấn nội dung không chứng minh sẽ có view, CTR, retention hay thứ hạng. Với nội dung cần xác minh, yêu cầu kiểm chứng và duyệt của con người.
 
-### Technical design / implementation
+### Thiết kế kỹ thuật / implement
 
-- **Small isolated change:** `developer` may implement directly with focused tests.
-- **New feature limited to one module:** developer inspects module and tests, runs `reuse-scan`, and follows the current local contract.
-- **Cross-phase, API, contract, schema or migration change:** `architect` first; developer implements the reviewed handoff; QA reviews the result.
-- **Frontend-only:** inspect static assets in `web/`, API route/response in `app.py`, and `tests/test_frontend_static.py` where relevant.
-- **Persistence:** inspect `core/database.py`, `core/contracts.py`, and `tests/test_contracts_db.py`. Use isolated test databases; never reset `data/tubechain.db`.
-- **Media/FFmpeg:** inspect `modules/video_assembler/` or `modules/scene_illustrator/` and use temporary fixtures. Do not overwrite or delete user media.
+- **Thay đổi nhỏ, cô lập:** `developer` có thể xử lý trực tiếp với test tập trung.
+- **Tính năng mới trong một module:** developer kiểm tra module/test, chạy `reuse-scan`, tuân contract cục bộ.
+- **Thay đổi liên phase, API, contract, schema hoặc migration:** gọi `architect` trước; developer implement theo thiết kế đã duyệt; QA review.
+- **Chỉ frontend:** kiểm tra asset tĩnh trong `web/`, route/response API ở `app.py` và `tests/test_frontend_static.py` khi phù hợp.
+- **Persistence:** kiểm tra `core/database.py`, `core/contracts.py`, `tests/test_contracts_db.py`. Dùng DB test cô lập; không reset `data/tubechain.db`.
+- **Media/FFmpeg:** kiểm tra `modules/video_assembler/` hoặc `modules/scene_illustrator/`, dùng fixture tạm. Không ghi đè hoặc xóa media người dùng.
 
-### Debugging
+### Debug
 
-Use skill `debug-flow`:
+Dùng skill `debug-flow`:
 
-1. Reproduce with a focused test or safe fixture.
-2. Isolate the route/module/data boundary.
-3. Diagnose from code and evidence, not guesses.
-4. Make the smallest root-cause fix and add regression coverage.
-5. Re-run the reproducer and relevant wider checks; report failures and unknowns.
+1. Tái hiện bằng test tập trung hoặc fixture an toàn.
+2. Cô lập route/module/ranh giới dữ liệu.
+3. Chẩn đoán bằng code và bằng chứng, không đoán mò.
+4. Sửa nhỏ nhất xử lý nguyên nhân gốc và thêm regression coverage.
+5. Chạy lại test tái hiện cùng kiểm tra rộng phù hợp; báo lỗi và phần chưa rõ.
 
-Do not run database migrations or destructive cleanup to reproduce a bug.
+Không chạy migration database hoặc dọn dữ liệu phá hủy để tái hiện bug.
 
-### Tests and quality review
+### Test và quality review
 
-- Behavior changes: follow `tdd-playbook` (Red → Green → Refactor) and do not claim a Red was observed unless the failing test was actually run.
-- Existing documented test command: `python -m pytest` (from `README.md`). No repository-wide lint/type-check/build command was confirmed during this assessment.
-- Run the narrowest relevant test first; expand to affected suites when practical. Report command, result, skipped tests and reason.
-- `qa-reviewer` reviews changed code, direct callers/contracts and tests; checks SQLite parameterization, path/deletion scope, secret handling, phase invariants, subprocess/resource handling and unnecessary duplication.
-- A hook reminder is not proof of TDD, and tests do not replace diff review.
+- Thay đổi hành vi: theo `tdd-playbook` (Red → Green → Refactor); không nói đã thấy Red nếu chưa chạy test thất bại.
+- Lệnh test đã được ghi trong README: `python -m pytest`. Chưa xác nhận lệnh lint/type-check/build toàn repo.
+- Chạy test liên quan hẹp nhất trước; mở rộng suite theo mức ảnh hưởng. Báo lệnh, kết quả, test bỏ qua và lý do.
+- `qa-reviewer` kiểm tra code đổi, caller/contract trực tiếp và test; rà SQL parameterization, phạm vi path/xóa, secret, ràng buộc phase, tài nguyên/subprocess và trùng lặp không cần thiết.
+- Hook nhắc nhở không chứng minh TDD đã được làm; test cũng không thay thế diff review.
 
-### Documentation
+### Tài liệu
 
-- Keep factual claims aligned with current source. `system-description.md` contains broader and partly aspirational/legacy context; verify it against code.
-- For docs-only changes, validate links and referenced paths; do not invent dependencies or install commands when manifests are absent.
-- Keep development harness docs separate from user instructions for running TubeChain.
+- Nội dung thực tế phải khớp source. `system-description.md` có thông tin tổng quan rộng hơn và một phần aspirational/legacy; đối chiếu với code.
+- Với docs-only, kiểm tra link và path được nhắc tới; không bịa dependency/lệnh cài khi không có manifest.
+- Tách tài liệu phát triển harness khỏi hướng dẫn người dùng chạy TubeChain.
 
 ### DevOps / CI / release
 
-The inspected repository inventory did not include a CI configuration or root dependency manifest. Do not invent a pipeline or add one implicitly. Any future request to add CI, change permissions, install dependencies, modify runtime/production settings, deploy, release, commit, tag or push requires explicit scope/approval. Begin read-only and state expected side effects before acting.
+Inventory repo đã xem không có cấu hình CI hoặc manifest dependency ở root. Không tự bịa pipeline hoặc thêm CI. Mọi yêu cầu thêm CI, đổi quyền, cài dependency, sửa runtime/production settings, deploy, release, commit, tag hoặc push cần phạm vi/phê duyệt rõ. Bắt đầu chỉ-đọc và nêu side effect dự kiến trước khi thao tác.
 
-## Clarification and approval gates
+## Khi nào cần hỏi lại hoặc xin duyệt
 
-**Ask the user before proceeding** when an unresolved choice can materially change scope, user-visible behavior, durable data/schema, API compatibility, security/privacy, external cost/network usage, permissions, or cause an irreversible action. Also ask before editing root instructions, active settings/hooks/CI, or user/local configuration unless the user explicitly authorized that exact change.
+**Hỏi người dùng trước** nếu lựa chọn chưa rõ có thể làm đổi đáng kể phạm vi, hành vi người dùng, dữ liệu lâu dài/schema, tương thích API, bảo mật/quyền riêng tư, chi phí/gửi dữ liệu ra ngoài, quyền truy cập hoặc gây hành động khó đảo ngược. Cũng hỏi trước khi sửa hướng dẫn gốc, settings/hooks/CI đang chạy hoặc cấu hình local/người dùng nếu chưa được cho phép đúng thay đổi đó.
 
-**Proceed with a safe assumption** when the missing detail is low-impact, reversible and compatible with existing behavior. State the assumption in the handoff/report; do not ask questions whose answers would not change the implementation.
+**Tự chọn giả định an toàn** khi chi tiết thiếu ít ảnh hưởng, dễ đảo ngược và tương thích hành vi hiện có. Ghi giả định trong handoff/báo cáo; không hỏi câu mà câu trả lời không làm thay đổi cách xử lý.
 
-Examples:
-- Ask: an ambiguous requirement may imply deleting persisted records or changing phase output shape.
-- Ask: choosing a live AI provider, sending repository data externally, or spending API credits.
-- Ask: modifying `.claude/settings.json`, `CLAUDE.md`, permissions, hooks or CI outside an already approved plan.
-- Assume and state: use the existing UI style for a small non-breaking UI control when there is one clear precedent.
+Ví dụ:
+- Hỏi: yêu cầu mơ hồ có thể dẫn tới xóa record đã lưu hoặc đổi shape đầu ra phase.
+- Hỏi: chọn AI provider chạy thật, gửi dữ liệu repo ra ngoài hoặc tiêu API credit.
+- Hỏi: sửa `.claude/settings.json`, `CLAUDE.md`, permission, hook hoặc CI ngoài kế hoạch đã duyệt.
+- Tự giả định và ghi rõ: dùng style UI hiện có cho control nhỏ, không phá tương thích, nếu có một tiền lệ rõ ràng.
 
-## State, handoff and completion
+## State, handoff và hoàn tất
 
-Use `.claude/skills/task-state-init` and `.claude/skills/progress-tracker` for substantial, multi-step work; skip state files for trivial edits. Never overwrite active task history without checking it first.
+Dùng `.claude/skills/task-state-init` và `.claude/skills/progress-tracker` cho task lớn/nhiều bước; bỏ qua state file với sửa nhỏ. Không ghi đè lịch sử task trước khi kiểm tra.
 
-A useful handoff includes:
+Handoff nên có:
 
-- User goal and accepted scope; out-of-scope items.
-- Decisions, assumptions and links to relevant design/contracts.
-- Files/modules changed or proposed.
-- Tests/checks run with exact results; skipped checks and why.
-- Risks, unresolved questions, blockers and next owner/action.
+- Mục tiêu người dùng, phạm vi đã thống nhất và phần ngoài phạm vi.
+- Quyết định, giả định, đường dẫn thiết kế/contract liên quan.
+- File/module đã sửa hoặc dự kiến sửa.
+- Test/kiểm tra đã chạy cùng kết quả chính xác; phần bỏ qua và lý do.
+- Rủi ro, câu hỏi chưa giải quyết, blocker và người/bước tiếp theo.
 
-Before saying work is complete, inspect the diff/status for scope, preserve pre-existing changes, verify applicable acceptance criteria, and report any check not run. Never commit/push/deploy unless explicitly requested.
+Trước khi báo hoàn tất, xem diff/status để kiểm soát phạm vi, giữ nguyên thay đổi có sẵn, xác minh tiêu chí nghiệm thu và nêu rõ kiểm tra chưa chạy. Không commit/push/deploy nếu chưa được yêu cầu.
 
-## Current hook limitations (documentation, not configuration changes)
+## Giới hạn hook hiện tại (ghi nhận, không đổi cấu hình)
 
-- `.claude/settings.json` currently registers the pre-tool safety hook for `Bash` only. Do not imply it protects PowerShell or every shell command.
-- The pre-tool hook recognizes selected literal destructive command patterns. It is not a full shell parser or sandbox; command chaining, aliases, scripts, alternate shells and path variants may evade string checks.
-- The post-tool TDD hook is an advisory after `Write|Edit`; it cannot prevent or undo a completed edit.
-- Hook scripts use relative paths in the current configuration; verify execution from a worktree or alternate CWD before relying on it.
-- These observations are recorded for future review. This workflow does not change active hooks, settings or permissions.
+- `.claude/settings.json` hiện chỉ đăng ký safety hook PreToolUse cho `Bash`. Không khẳng định hook bảo vệ PowerShell hoặc mọi shell.
+- Pre-tool hook nhận diện một số chuỗi lệnh phá hủy cụ thể; không phải parser shell đầy đủ hay sandbox. Chaining lệnh, alias, script, shell khác và biến thể path có thể né kiểm tra chuỗi.
+- Hook TDD PostToolUse chỉ nhắc sau `Write|Edit`; không thể ngăn hoặc hoàn tác edit đã hoàn tất.
+- Hook script dùng đường dẫn tương đối theo cấu hình hiện tại; cần xác minh khi chạy trong worktree/CWD khác.
+- Đây chỉ là ghi chú cho lần review sau; workflow này không thay đổi hooks, settings hoặc quyền.
