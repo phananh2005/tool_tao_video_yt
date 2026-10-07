@@ -1,28 +1,45 @@
-﻿# TubeChain Web UI Local
+# TubeChain
 
-TubeChain là một công cụ 100% Local hỗ trợ sản xuất video YouTube hoàn toàn tự động theo pipeline 6 giai đoạn nối tiếp nhau (từ Brainstorm ý tưởng, viết kịch bản, làm lời thoại, vẽ ảnh, đến ráp video và SEO).
+TubeChain is a local-first tool for managing a YouTube video-production workflow. The current app uses **Python and FastAPI**, stores structured project data in **SQLite**, serves a local web UI from `web/`, and uses **FFmpeg** for basic video assembly.
 
-## Tính năng Nổi bật
-- **6 Content Pillars**: Tối ưu riêng cho luồng làm video Edutainment (Tâm lý học, Tài chính, Bí ẩn thế giới...).
-- **Rabbit Hole Series**: Tự động nhóm các video có tính chất nối tiếp (Phần 1, Phần 2, Phần 3) thành chuỗi, giúp tăng Watch Time.
-- **Chống Trùng lặp (Dedup) Thuần Local**: Tính toán Cosine Similarity dựa trên mảng `topics` nội bộ, bảo đảm không bao giờ bạn làm 2 video giống hệt nhau. Ý tưởng bị vứt rác cũng được lưu ngầm để chặn AI không nhắc lại.
-- **Dọn Rác Thông Minh**: Chỉ xóa File Media (Audio, Video nặng) để giải phóng ổ cứng, tuyệt đối giữ lại Dữ liệu Text (Script, Ý tưởng) để làm não bộ chống trùng lặp.
+## Pipeline
 
-## Cài đặt và Sử dụng
+1. **Idea Engine** — brainstorm, deduplication, and Rabbit Hole planning.
+2. **Script Generator** — structured script content and timing.
+3. **Voiceover Writer** — spoken-text generation.
+4. **Scene Illustrator** — scene breakdown and image prompts/assets.
+5. **Video Assembler** — sequential static-image assembly.
+6. **SEO Optimizer** — titles, descriptions, tags, chapters, and thumbnail concepts.
 
-**1. Môi trường:**
-- Yêu cầu Python 3.9+
-- Cài đặt thư viện: `pip install fastapi uvicorn pydantic`
-- Cài đặt FFmpeg trên máy (để chạy Phase 5 Render Video).
+The codebase also contains a **legacy Phase 3.5 voice-synthesis path**. Phase 3 is voiceover text generation; those stages are separate. See `system-description.md` for broader product context and verify described behavior against the implementation.
 
-**2. Khởi động Web UI:**
-Mở Terminal ở thư mục gốc và chạy lệnh:
+## Project principles
+
+- Local UI/API and SQLite; no cloud database or deployment.
+- Prior-video history uses text/metadata/topics/embeddings, not retained old media.
+- Rabbit Hole series are capped at three videos. Dedup policy: `>85%` blocks, `60–85%` warns, `<60%` passes.
+- Video assembly is intentionally simple: static images in sequence, without animation or transitions.
+
+## Run locally
+
+The application entry point is `app.py`; it binds the FastAPI server to `127.0.0.1:8000` when run directly:
+
 ```bash
 python app.py
 ```
 
-**3. Bắt đầu:**
-Mở trình duyệt truy cập: `http://127.0.0.1:8000`
+Install the dependencies used by the project in your Python environment before starting it. This repository currently has no root `requirements.txt` or `pyproject.toml`, so dependency installation is not specified here. FFmpeg must be available on `PATH` for video rendering.
 
----
-*Lưu ý cho Dev mới: Kiến trúc dự án áp dụng hệ thống Idea Bank và gom nhóm Rabbit Hole qua `series_id`. Khi xóa dự án, CẤM xóa dữ liệu SQL (vì AI cần để học chống trùng lặp), CHỈ xóa thư mục media.*
+Open `http://127.0.0.1:8000` in a browser.
+
+## Tests
+
+Tests are in `tests/` and use pytest. If pytest is installed in the active environment:
+
+```bash
+python -m pytest
+```
+
+## Development with Claude Code
+
+Project rules and task routing are documented in [`CLAUDE.md`](CLAUDE.md). The optional `youtube-strategist` and `prompt-engineer` subagents support content strategy and prompt quality during development; they are not part of the runtime video pipeline. Other subagents cover architecture, implementation, and independent QA review. Loadable skills live in `.claude/skills/<name>/SKILL.md`; hooks are configured in `.claude/settings.json` and implemented in `.claude/hooks/`. Hooks are defense-in-depth and do not replace review, tests, or normal permission controls.

@@ -1,83 +1,68 @@
-# TubeChain — Agent Registry
+# TubeChain — Project Guide for Claude Code
 
-## Tóm tắt dự án
+## Project snapshot
+TubeChain is a local-first YouTube video-production tool. The checked-in application currently uses Python + FastAPI (`app.py`), SQLite (`core/database.py`), static web assets (`web/`), pipeline modules under `modules/`, and pytest tests under `tests/`. FFmpeg is used for basic video assembly. Confirm dependencies and commands from project files before assuming them; do not invent setup instructions.
 
-TubeChain là tool 100% local (web UI local) tự động hóa sản xuất video YouTube qua pipeline 6 phase tuần tự:
+The product pipeline is:
+1. **Idea Engine** — brainstorm, deduplication, Rabbit Hole planning.
+2. **Script Generator** — structured script and timing.
+3. **Voiceover Writer** — spoken-text generation only.
+4. **Scene Illustrator** — scene breakdown, image prompts/assets.
+5. **Video Assembler** — simple sequential static-image assembly.
+6. **SEO Optimizer** — title, description, tags, chapters and thumbnail concept.
 
-1. **Idea Engine** — brainstorm, chống trùng lặp, Rabbit Hole series
-2. **Script Generator** — kịch bản JSON có cấu trúc timing chuẩn
-3. **Voiceover Writer** — chuyển outline → spoken text (KHÔNG có TTS)
-4. **Scene Illustrator** — chia scene, sinh prompt ảnh, lấy ảnh (API hoặc thủ công)
-5. **Video Assembler** — ghép ảnh tuần tự bằng FFmpeg, đơn giản tuyệt đối
-6. **SEO Optimizer** — title/description/tags/chapters/thumbnail concept
+The current implementation also has a **legacy Phase 3.5 voice synthesis** path. Keep that distinct from Phase 3 text generation; do not silently remove or extend either behavior.
 
-## Ràng buộc cứng
+## Hard product constraints
+- Keep the app local: local UI/API and SQLite; do not add cloud DB, deployment or remote storage.
+- Historical videos are represented by text/metadata/topics/embeddings only; do not retain old video media as history.
+- Rabbit Hole groups are capped at **3 videos**.
+- Dedup thresholds: similarity `> 0.85` blocks; `0.60–0.85` warns; `< 0.60` passes. Reuse existing configuration/logic rather than duplicating thresholds.
+- Phase 3 writes voiceover text; it is not a TTS feature. Treat the existing Phase 3.5 implementation as a separate legacy stage.
+- Keep video assembly intentionally simple: sequential static images and the existing supported audio input; no Ken Burns, transitions, animation, or background-music feature.
+- Keep AI calls behind the existing provider-adapter boundary. Do not claim API/manual modes exist unless confirmed in code; never hardcode credentials.
+- Development subagents assist code work only; they are not runtime actors in the video-production pipeline.
 
-| # | Ràng buộc |
-|---|-----------|
-| 1 | 100% local — không cloud, không deploy, không DB ngoài SQLite |
-| 2 | Video cũ chỉ lưu **dữ liệu** (title, transcript, topics, embeddings) — không lưu/xử lý media |
-| 3 | Chuỗi Rabbit Hole đúng **3 video**; mọi nhóm video liên quan **tối đa 3** |
-| 4 | Ngưỡng dedup: >85% chặn, 60-85% cảnh báo, <60% cho phép (hằng số config) |
-| 5 | Tool **không có TTS** — Phase 3 chỉ xuất text |
-| 6 | Dựng video **đơn giản** — ghép ảnh tuần tự, không Ken Burns/transitions/animation/nhạc nền |
-| 7 | Mọi lời gọi AI phải qua **provider adapter** (MODE_API / MODE_MANUAL) |
-| 8 | Các agent chỉ dùng để **phát triển code**, không tham gia runtime tạo video |
+## Routing and handoffs
+Use subagents when they add value; do not force a multi-agent chain for trivial edits.
 
-## Stack
+| Agent | Model alias | Responsibility |
+|---|---|---|
+| `youtube-strategist` | `opus` | YouTube audience/content strategy for ideas, angle, hooks, retention, series, titles, thumbnails and SEO. Provides content requirements and measurable editorial criteria; does not define technical contracts or write code. |
+| `prompt-engineer` | `sonnet` | Design/review prompt templates and deterministic prompt-output evaluations for the existing adapter flow. Does not make live provider calls or silently change shared contracts. |
+| `architect` | `opus` | Non-trivial requirements/design, shared data contracts, SQLite schema/migrations, cross-phase decisions and acceptance criteria. Does not implement application code. |
+| `developer` | `sonnet` | Implement a clear request or approved design, reuse existing code, follow TDD for behavior changes, run relevant checks. |
+| `qa-reviewer` | `opus` | Independent diff review, invariant/security/regression checks and test verification; normally reports findings rather than changing production code. |
 
-- Backend: Python (Flask/FastAPI)
-- Frontend: HTML/CSS/JS thuần hoặc framework nhẹ
-- Database: SQLite (`data/tubechain.db`)
-- Vector search: `data/embeddings.json` + cosine similarity in-memory
-- Video: FFmpeg
-- AI Text/Image: qua provider adapter, chưa xác định nguồn cụ thể
-- Test: pytest
+In this environment, the user-configured runtime maps `opus` to Gemini 3.1 Pro and `sonnet` to Gemini 3.8 Flash. Keep the documented aliases in subagent frontmatter; do not replace them with guessed provider-specific IDs.
 
-## Danh sách Agent
+Routing by task type:
+- **AI-generated content/product behavior:** `youtube-strategist` defines audience/content goals and acceptance criteria → `architect` translates them into technical design/contracts → `prompt-engineer` drafts or evaluates prompt behavior against the approved contract → `developer` implements → `qa-reviewer` independently verifies.
+- **Prompt-only change with stable output contract:** `prompt-engineer` → `developer` (tests) → `qa-reviewer` when risk warrants.
+- **Technical/schema/cross-phase work:** `architect` (when design is non-trivial) → `developer` → `qa-reviewer`.
+- **Small isolated fix:** `developer` may proceed directly with focused tests; involve other agents only where they add value.
 
-| Agent | Sở hữu | Khi nào dùng |
-|-------|--------|--------------|
-| **planner** | `plans/` | **Luôn chạy đầu tiên** — phân tích yêu cầu, xuất kế hoạch .md cho các agent khác |
-| **db-architect** | Data contract, schema SQLite, config, provider contract | Thiết kế schema, contract giữa các phase, state machine |
-| **idea-engine-coder** | `modules/idea_engine/` | Code Phase 1: brainstorm, dedup, Rabbit Hole, playlist, graveyard |
-| **content-coder** | `modules/script_gen/`, `modules/voiceover/`, `modules/seo_optimizer/`, `prompts/` | Code Phase 2 + 3 + 6: script, voiceover text, SEO metadata |
-| **media-coder** | `modules/scene_illustrator/`, `modules/video_assembler/` | Code Phase 4 + 5: chia scene, sinh prompt ảnh, ghép video FFmpeg |
-| **web-coder** | `app.py`, `web/` | Backend API + frontend 7 màn hình |
-| **qa-test-engineer** | `tests/` | Test toàn bộ: unit, integration, golden test, E2E |
+`youtube-strategist` owns content strategy, not technical architecture. `prompt-engineer` owns prompt design/evaluation, not database/API contracts. Shared contract changes always return to `architect` before implementation proceeds. The two content-focused agents are development-time specialists, never runtime participants in video creation.
 
-## Quy tắc Handoff
+## Engineering workflow
+1. Read the relevant source, callers, tests, and any design handoff; identify verified behavior before changing it.
+2. Run skill `reuse-scan` before creating a new helper, route, schema, component, or repeated behavior.
+3. For behavior changes and bugs, follow `tdd-playbook`: Red (observe the relevant failing test when practical) → Green → Refactor → verification. Do not claim a test was run if it was not.
+4. Use `debug-flow` for reproducible failures. Use `task-state-init` and `progress-tracker` for substantial tracked work, not trivial edits.
+5. Run focused tests first, then the broader affected suite. Report exact commands, results, and any checks not run.
+6. Review the diff for scope creep, contract drift, accidental data/media deletion, credentials, and unrelated changes.
 
-1. **TUYỆT ĐỐI KHÔNG TỰ TRẢ LỜI CODE/FIX TRỰC TIẾP**. Mọi task đều phải chạy qua workflow bắt buộc: `planner` → `db-architect` (nếu có đổi schema/contract) → Coder tương ứng (`media-coder`, `web-coder`...) → `qa-test-engineer`.
-2. **Giao tiếp qua data contract** — mọi agent dùng contract do `db-architect` định nghĩa. Không tự chế format riêng.
-3. **Contract bao gồm**: IdeaJSON, ScriptJSON, VoiceoverJSON, SceneAssets, AudioTrack, MetadataJSON.
-4. **Quy trình**: `planner` phân tích yêu cầu → `db-architect` tạo contract → các coder agent implement theo contract → `qa-test-engineer` test theo contract.
-5. **Xung đột contract**: nếu agent cần thay đổi contract → escalate cho `db-architect`, không tự sửa.
-6. **Không agent nào ghi file ngoài vùng sở hữu** — vi phạm phải escalate.
+## Safety and data handling
+- Never delete or reinitialize `data/tubechain.db` or user media to make a test pass.
+- Use temporary databases/media fixtures for tests. Keep destructive operations within the explicitly requested project scope and inspect targets first.
+- Do not commit, force-push, deploy, or publish unless the user explicitly asks.
+- Hooks in `.claude/settings.json` are narrow defense-in-depth. The PreToolUse guard blocks selected obvious destructive shell commands; it is not a complete shell parser or sandbox. The PostToolUse TDD reminder is advisory and cannot undo or block a completed edit.
+- Do not modify `.claude/settings.local.json` or user/global Claude Code configuration unless explicitly requested.
 
-## Workflow đề xuất
-
-```
-planner (luôn chạy đầu tiên — xuất kế hoạch .md)
-    ↓
-db-architect (thiết kế contract/schema theo kế hoạch)
-    ↓
-idea-engine-coder ─┐
-content-coder      ├── song song
-media-coder        ┘
-    ↓
-web-coder (tích hợp)
-    ↓
-qa-test-engineer (xuyên suốt, chạy sau mỗi milestone)
-```
-
-## Gọi agent trong Claude Code
-
-```bash
-# Luôn bắt đầu bằng planner
-claude "Dùng agent planner: tôi muốn implement Phase 1 Idea Engine hoàn chỉnh"
-# Sau khi duyệt kế hoạch, chạy từng agent theo plan
-claude "Dùng agent db-architect để thiết kế schema SQLite cho bảng projects và ideas"
-claude "Dùng agent idea-engine-coder để implement Topic Cross-Pollination"
-claude "Dùng agent qa-test-engineer để viết test cho dedup filter 3 ngưỡng"
-```
+## Framework files
+- Project-specific subagents: `.claude/agents/`
+- Loadable skills: `.claude/skills/<skill-name>/SKILL.md`
+- Hook configuration and scripts: `.claude/settings.json`, `.claude/hooks/`
+- Reusable state templates: `.claude/state/_template/`
+- Product overview: `README.md`; detailed product/legacy context: `system-description.md` (verify against implementation).
+- Agent harness inventory and task workflows: [`docs/agent/README.md`](docs/agent/README.md) and [`docs/agent/workflows.md`](docs/agent/workflows.md).
