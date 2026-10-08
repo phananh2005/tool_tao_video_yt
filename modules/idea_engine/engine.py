@@ -1,3 +1,5 @@
+from core.logger import get_logger
+logger = get_logger(__name__)
 import uuid
 import json
 import re
@@ -23,8 +25,8 @@ class IdeaEngine:
         try:
             return json.loads(text)
         except json.JSONDecodeError as e:
-            print("[LỖI PARSE JSON]:", e)
-            print("Nội dung gốc:", text)
+            logger.error(f"[LỖI PARSE JSON]: {e}")
+            logger.info(f"Nội dung gốc: {text}")
             return []
 
     def develop_idea_strategy(self, topic: str) -> str:
@@ -42,10 +44,10 @@ class IdeaEngine:
         return self.adapter.generate_text(prompt, expected_format='text')
 
     def generate_ideas(self, topic: str, count: int = 5, is_rabbit_hole: bool = False) -> List[IdeaJSON]:
-        print("\n[IdeaEngine] BƯỚC 1: Phân tích thị trường & Tìm góc nhìn Viral...")
+        logger.info("\n[IdeaEngine] BƯỚC 1: Phân tích thị trường & Tìm góc nhìn Viral...")
         strategy = self.develop_idea_strategy(topic)
 
-        print("\n[IdeaEngine] BƯỚC 2: Sinh ý tưởng dựa trên Chiến lược đột phá...")
+        logger.info("\n[IdeaEngine] BƯỚC 2: Sinh ý tưởng dựa trên Chiến lược đột phá...")
         if is_rabbit_hole:
             prompt = f"""
             Chủ đề: '{topic}'

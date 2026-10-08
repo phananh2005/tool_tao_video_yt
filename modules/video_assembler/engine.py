@@ -1,3 +1,5 @@
+from core.logger import get_logger
+logger = get_logger(__name__)
 import os
 import subprocess
 import shutil
@@ -152,25 +154,25 @@ class VideoAssemblerEngine:
     def render_video_with_audio(self, script_id: int, timeline: list) -> bool:
         project_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'projects', str(script_id)))
 
-        print("\n[Engine] Bước 1: Khởi tạo dữ liệu Ảnh và Âm thanh cho FFmpeg...")
+        logger.info("\n[Engine] Bước 1: Khởi tạo dữ liệu Ảnh và Âm thanh cho FFmpeg...")
         v_concat, a_concat = self.generate_concat_files(project_dir, timeline)
 
         output_file = os.path.join(project_dir, "final_video_with_voice.mp4")
         if os.path.exists(output_file):
             os.remove(output_file)
 
-        print(f"[Engine] Bước 2: Bắt đầu Render video lồng tiếng (với hiệu ứng chuyển cảnh)...")
+        logger.info(f"[Engine] Bước 2: Bắt đầu Render video lồng tiếng (với hiệu ứng chuyển cảnh)...")
 
         command = self._build_xfade_command(project_dir, timeline, a_concat, output_file)
 
         try:
             result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
             if result.returncode == 0:
-                print(f"[Engine] => Render thành công! Video có tiếng lưu tại: {output_file}")
+                logger.info(f"[Engine] => Render thành công! Video có tiếng lưu tại: {output_file}")
                 return True
             else:
-                print(f"[Engine] => LỖI FFmpeg:\n{result.stderr}")
+                logger.error(f"[Engine] => LỖI FFmpeg:\n{result.stderr}")
                 return False
         except Exception as e:
-            print(f"[Engine] => Lỗi thực thi FFmpeg: {e}")
+            logger.error(f"[Engine] => Lỗi thực thi FFmpeg: {e}")
             return False

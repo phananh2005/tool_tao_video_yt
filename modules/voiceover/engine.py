@@ -1,4 +1,6 @@
 ﻿import json
+from core.logger import get_logger
+logger = get_logger(__name__)
 import re
 from typing import List
 from core.contracts import AIProviderContract, VoiceoverSceneJSON, VoiceoverJSON
@@ -24,8 +26,8 @@ class VoiceoverEngine:
         try:
             return json.loads(text)
         except json.JSONDecodeError as e:
-            print("[LỖI PARSE JSON]:", e)
-            print("Nội dung gốc:", text)
+            logger.error(f"[LỖI PARSE JSON]: {e}")
+            logger.info(f"Nội dung gốc: {text}")
             return []
 
     def develop_voiceover_strategy(self, title: str, all_scenes_context: list) -> str:
@@ -147,18 +149,18 @@ class VoiceoverEngine:
                 chapters_map[c_num] = []
             chapters_map[c_num].append(sc)
 
-        print(f"\n[Engine] BƯỚC 1: Xây dựng Chiến lược Lời thoại (Voiceover Strategy) cho {len(chapters_map)} Chương...")
+        logger.info(f"\n[Engine] BƯỚC 1: Xây dựng Chiến lược Lời thoại (Voiceover Strategy) cho {len(chapters_map)} Chương...")
         strategy = self.develop_voiceover_strategy(title, all_scenes)
 
         final_vo_scenes = []
         previous_chapter_ending = ""
 
-        print(f"\n[Engine] BƯỚC 2: Gọi AI viết và chuốt lời thoại từng Chương...")
+        logger.info(f"\n[Engine] BƯỚC 2: Gọi AI viết và chuốt lời thoại từng Chương...")
         for c_num, scenes_in_chapter in chapters_map.items():
-            print(f"  -> [Chương {c_num}] Đang viết nháp...")
+            logger.info(f"  -> [Chương {c_num}] Đang viết nháp...")
             draft_vo = self.generate_chapter_voiceover_draft(title, c_num, scenes_in_chapter, strategy, previous_chapter_ending)
 
-            print(f"  -> [Chương {c_num}] Đang chuốt lại (Critique Mode)...")
+            logger.info(f"  -> [Chương {c_num}] Đang chuốt lại (Critique Mode)...")
             vo_scenes = self.refine_chapter_voiceover(title, c_num, draft_vo, strategy)
 
             # Gộp kết quả

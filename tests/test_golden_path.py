@@ -34,13 +34,16 @@ class FakeAdapter(AIProviderContract):
     def generate_text(self, prompt, expected_format='json'):
         self.call_count += 1
         lower = prompt.lower()
-        if "voiceover" in lower or "lời thoại" in lower or "spoken" in lower or "lời bình" in lower:
+        if "tập trung 100% vào việc tạo ra lời thoại" in lower or "lời bình" in lower:
             return '[{"scene_number": 1, "spoken_text": "Hello from golden path"}]'
-        if "seo" in lower or "thumbnail" in lower:
+        if "bộ thông tin chuẩn seo" in lower:
             return ('{"options":[{"title":"Golden SEO","thumbnail_concept":"thumb",'
                     '"thumbnail_text":"Look"}],"description":"desc","tags":"t1",'
                     '"chapter_titles":["Chapter One"]}')
-        # Default: idea generation (prompt contains "ý tưởng" / idea keywords)
+        # Default: idea generation or script generation
+        if "chapter_number" in lower or "kịch bản" in lower:
+            return '{"title": "Golden Script", "scenes": [{"scene_number": 1, "chapter_number": 1, "visual_concept": "Concept 1", "duration": 10}]}'
+
         return '[{"title":"Golden Idea","topics":["ai","test"],"rabbit_hole_series":false,"part_number":1,"summary":"Golden summary"}]'
 
     def generate_image(self, prompt, **kwargs):

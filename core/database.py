@@ -1,3 +1,5 @@
+from core.logger import get_logger
+logger = get_logger(__name__)
 import os
 import json
 import sqlite3
@@ -334,7 +336,7 @@ def get_ready_to_render_projects():
                 'timeline': timeline
             })
         except Exception as e:
-            print(f"Lỗi parse dữ liệu cho script {script_id}: {e}")
+            logger.error(f"Lỗi parse dữ liệu cho script {script_id}: {e}")
 
     return projects
 
@@ -439,7 +441,7 @@ def get_ready_to_render_projects_with_audio():
                     'timeline': timeline
                 })
         except (KeyError, TypeError, ValueError) as e:
-            print(f"Lỗi parse render inputs cho script {script_id}: {e}")
+            logger.error(f"Lỗi parse render inputs cho script {script_id}: {e}")
 
     return projects
 

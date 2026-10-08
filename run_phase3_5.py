@@ -1,4 +1,6 @@
 ﻿import sys
+from core.logger import get_logger
+logger = get_logger(__name__)
 import os
 
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
@@ -27,12 +29,12 @@ def main():
     
     projects = get_ready_projects()
     if not projects:
-        print("\n=> Không có Dự án nào đủ điều kiện lồng tiếng (Cần có Voiceover và Ảnh).")
+        logger.info("\n=> Không có Dự án nào đủ điều kiện lồng tiếng (Cần có Voiceover và Ảnh).")
         return
         
-    print("\n=== DANH SÁCH DỰ ÁN SẴN SÀNG LỒNG TIẾNG AI (EDGE-TTS) ===")
+    logger.info("\n=== DANH SÁCH DỰ ÁN SẴN SÀNG LỒNG TIẾNG AI (EDGE-TTS) ===")
     for p in projects:
-        print(f"[{p['script_id']}] - Tên: {p['title']}")
+        logger.info(f"[{p['script_id']}] - Tên: {p['title']}")
         
     choice = input("\nNhập số ID của Dự án muốn lồng tiếng: ").strip()
     if not choice.isdigit():

@@ -1,4 +1,6 @@
 ﻿import sys
+from core.logger import get_logger
+logger = get_logger(__name__)
 import os
 
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
@@ -12,12 +14,12 @@ def main():
     
     scripts = get_scripts_without_assets()
     if not scripts:
-        print("\n=> Không có Kịch bản nào đang chờ tạo Hình ảnh (Assets).")
+        logger.info("\n=> Không có Kịch bản nào đang chờ tạo Hình ảnh (Assets).")
         return
         
-    print("\n=== DANH SÁCH KỊCH BẢN CHƯA CÓ HÌNH ẢNH ===")
+    logger.info("\n=== DANH SÁCH KỊCH BẢN CHƯA CÓ HÌNH ẢNH ===")
     for row in scripts:
-        print(f"[{row['script_id']}] - Chủ đề: {row['title']}")
+        logger.info(f"[{row['script_id']}] - Chủ đề: {row['title']}")
         
     choice = input("\nNhập số ID của Kịch bản muốn tạo ảnh: ").strip()
     if not choice.isdigit():
@@ -27,11 +29,11 @@ def main():
     script_dict = get_script_by_id(script_id)
     
     if not script_dict:
-        print("=> Lỗi: ID không hợp lệ.")
+        logger.error("=> Lỗi: ID không hợp lệ.")
         return
         
     title = next((r['title'] for r in scripts if r['script_id'] == script_id), "Unknown")
-    print(f"\n=> Bắt đầu quá trình tạo Hình ảnh cho: '{title}'")
+    logger.info(f"\n=> Bắt đầu quá trình tạo Hình ảnh cho: '{title}'")
     
     adapter = GeminiWebAdapter()
     engine = SceneIllustratorEngine(adapter=adapter)
@@ -40,12 +42,12 @@ def main():
     
     if asset_obj.assets:
         save_asset(script_id, asset_obj)
-        print("\n" + "="*50)
-        print(f"=== THÀNH CÔNG: Đã tải xong {len(asset_obj.assets)} ảnh ===")
-        print("="*50)
-        print(f"=> Đường dẫn thư mục chứa ảnh: data/projects/{script_id}/")
+        logger.info("\n" + "="*50)
+        logger.info(f"=== THÀNH CÔNG: Đã tải xong {len(asset_obj.assets)} ảnh ===")
+        logger.info("="*50)
+        logger.info(f"=> Đường dẫn thư mục chứa ảnh: data/projects/{script_id}/")
     else:
-        print("=> Lỗi: Không tải được ảnh nào.")
+        logger.error("=> Lỗi: Không tải được ảnh nào.")
 
 if __name__ == '__main__':
     main()

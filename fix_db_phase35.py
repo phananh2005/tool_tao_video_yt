@@ -1,3 +1,5 @@
+from core.logger import get_logger
+logger = get_logger(__name__)
 import sqlite3
 import json
 import os
@@ -18,5 +20,5 @@ if row:
         
     cursor.execute("UPDATE assets SET content = ? WHERE script_id = 2", (json.dumps(asset_data),))
     conn.commit()
-    print("Fixed assets for script 2.")
+    logger.info("Fixed assets for script 2.")
 conn.close()

@@ -1,3 +1,5 @@
+from core.logger import get_logger
+logger = get_logger(__name__)
 import os
 import sqlite3
 import json
@@ -17,7 +19,7 @@ async def _generate_audio(text: str, output_path: str, voice: str = "vi-VN-HoaiM
         except Exception as e:
             if attempt == max_retries - 1:
                 raise e
-            print(f"      [!] Lỗi sinh audio (lần {attempt + 1}): {e}. Thử lại sau {2 ** attempt}s...")
+            logger.error(f"      [!] Lỗi sinh audio (lần {attempt + 1}): {e}. Thử lại sau {2 ** attempt}s...")
             await asyncio.sleep(2 ** attempt)
 
 def get_audio_duration(file_path: str) -> float:
@@ -31,7 +33,7 @@ def get_audio_duration(file_path: str) -> float:
         )
         return float(result.stdout.strip())
     except Exception as e:
-        print(f"Lỗi lấy duration audio: {e}")
+        logger.error(f"Lỗi lấy duration audio: {e}")
         return 10.0 # Mặc định fallback
 
 class VoiceSynthesizer:
@@ -45,7 +47,7 @@ class VoiceSynthesizer:
         audio_name = f"voice_{scene_number}.mp3"
         audio_path = os.path.join(project_dir, audio_name)
         
-        print(f"  -> Đang thu âm Scene {scene_number}: {text[:40]}...")
+        logger.info(f"  -> Đang thu âm Scene {scene_number}: {text[:40]}...")
         asyncio.run(_generate_audio(text, audio_path))
         actual_duration = get_audio_duration(audio_path)
         
@@ -62,7 +64,7 @@ class VoiceSynthesizer:
         conn.close()
         
         if not vo_row:
-            print("=> Kịch bản này chưa hoàn thiện Phase 3 (Voiceover).")
+            logger.info("=> Kịch bản này chưa hoàn thiện Phase 3 (Voiceover).")
             return False
             
         vo_data = json.loads(vo_row[0])
@@ -70,7 +72,7 @@ class VoiceSynthesizer:
         project_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'projects', str(script_id)))
         os.makedirs(project_dir, exist_ok=True)
         
-        print("\n[Synthesizer] Bắt đầu gọi Edge-TTS sinh âm thanh lồng tiếng...")
+        logger.info("\n[Synthesizer] Bắt đầu gọi Edge-TTS sinh âm thanh lồng tiếng...")
         paths = []
         for vo_sc in vo_data.get('voiceover_scenes', []):
             s_num = vo_sc['scene_number']
@@ -79,7 +81,7 @@ class VoiceSynthesizer:
             audio_name = f"voice_{s_num}.mp3"
             audio_path = os.path.join(project_dir, audio_name)
             
-            print(f"  -> Đang thu âm Scene {s_num}: {text[:40]}...")
+            logger.info(f"  -> Đang thu âm Scene {s_num}: {text[:40]}...")
             if not (os.path.exists(audio_path) and os.path.getsize(audio_path) > 0):
                 asyncio.run(_generate_audio(text, audio_path))
                 time.sleep(1) # Nghỉ 1 giây để tránh bị block WebSocket
@@ -88,7 +90,7 @@ class VoiceSynthesizer:
             self._update_asset_duration(script_id, s_num, actual_duration, audio_name)
             paths.append(f"/data/projects/{script_id}/{audio_name}")
             
-        print("[Synthesizer] Hoàn tất! Đã lưu audio và đồng bộ thời lượng.")
+        logger.info("[Synthesizer] Hoàn tất! Đã lưu audio và đồng bộ thời lượng.")
         return paths
         
     def _update_asset_duration(self, script_id: int, scene_number: int, duration: float, audio_name: str):

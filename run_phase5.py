@@ -1,4 +1,6 @@
 ﻿import sys
+from core.logger import get_logger
+logger = get_logger(__name__)
 import os
 
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
@@ -11,18 +13,18 @@ def main():
     engine = VideoAssemblerEngine()
     
     if not engine.check_ffmpeg():
-        print("Lỗi: Không tìm thấy FFmpeg.")
+        logger.error("Lỗi: Không tìm thấy FFmpeg.")
         return
 
     projects = get_ready_to_render_projects_with_audio()
     
     if not projects:
-        print("\n=> Không có dự án nào đủ điều kiện Render Video có lồng tiếng.")
+        logger.info("\n=> Không có dự án nào đủ điều kiện Render Video có lồng tiếng.")
         return
         
-    print("\n=== DANH SÁCH DỰ ÁN SẴN SÀNG RENDER VIDEO CÓ TIẾNG ===")
+    logger.info("\n=== DANH SÁCH DỰ ÁN SẴN SÀNG RENDER VIDEO CÓ TIẾNG ===")
     for p in projects:
-        print(f"[{p['script_id']}] - Tên: {p['title']}")
+        logger.info(f"[{p['script_id']}] - Tên: {p['title']}")
         
     choice = input("\nNhập số ID của Dự án muốn Render: ").strip()
     if not choice.isdigit():

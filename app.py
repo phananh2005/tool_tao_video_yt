@@ -15,6 +15,9 @@ from core.database import (
 )
 from core.contracts import ScriptJSON, SceneJSON, VoiceoverJSON, VoiceoverSceneJSON, AssetJSON, AssetSceneJSON
 
+from core.logger import get_logger
+logger = get_logger(__name__)
+
 from modules.idea_engine.adapter import GeminiWebAdapter
 from modules.idea_engine.engine import IdeaEngine
 from modules.script_gen.engine import ScriptGeneratorEngine
@@ -143,6 +146,7 @@ def delete_project_media_api(project_id: int):
         delete_project_media(project_id)
         return {"status": "success"}
     except Exception as e:
+        logger.error(f"API Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # --- PHASE 1: IDEA FACTORY ---
@@ -171,6 +175,7 @@ def brainstorm_ideas(req: ThemeRequest):
             })
         return {"project_id": project_id, "ideas": results}
     except Exception as e:
+        logger.error(f"API Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/projects/{project_id}/ideas")
@@ -228,6 +233,7 @@ def generate_script(idea_id: int):
         conn.close()
         return {"script_id": script_id, "script": script.__dict__}
     except Exception as e:
+        logger.error(f"API Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/scripts/{script_id}")
@@ -276,6 +282,7 @@ def generate_voiceover(script_id: int):
         vo_dict['is_synthesized'] = False
         return {"status": "success", "voiceover": vo_dict}
     except Exception as e:
+        logger.error(f"API Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/voiceovers/{script_id}")
@@ -320,6 +327,7 @@ def synthesize_voice(script_id: int):
     except HTTPException:
         raise
     except Exception as e:
+        logger.error(f"API Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/phase3_5/synthesize/{script_id}/{scene_number}")
@@ -329,6 +337,7 @@ def synthesize_voice_scene(script_id: int, scene_number: int, req: SynthesizeSce
         audio_url = synth.synthesize_single_scene(script_id, scene_number, req.text)
         return {"status": "success", "audio_url": audio_url}
     except Exception as e:
+        logger.error(f"API Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # --- PHASE 4: ART GALLERY ---
@@ -394,6 +403,7 @@ def generate_assets(script_id: int):
     except HTTPException:
         raise
     except Exception as e:
+        logger.error(f"API Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -428,6 +438,7 @@ def generate_single_asset(script_id: int, scene_number: int, req: GenerateSingle
 
         return {"status": "success", "image_path": image_path}
     except Exception as e:
+        logger.error(f"API Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/assets/{script_id}")
@@ -484,6 +495,7 @@ def render_video(script_id: int):
         engine = VideoAssemblerEngine()
         return StreamingResponse(engine.render_video_stream(script_id, project['timeline']), media_type="text/event-stream")
     except Exception as e:
+        logger.error(f"API Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/phase5/status/{script_id}")
@@ -527,6 +539,7 @@ def generate_seo(script_id: int):
 
         return {"status": "success", "seo": seo_data}
     except Exception as e:
+        logger.error(f"API Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/seo/{script_id}")
@@ -557,6 +570,7 @@ def delete_script_media_api(script_id: int):
         conn.close()
         return {"status": "success"}
     except Exception as e:
+        logger.error(f"API Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

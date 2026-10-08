@@ -1,3 +1,5 @@
+from core.logger import get_logger
+logger = get_logger(__name__)
 import json
 import re
 from typing import List
@@ -24,8 +26,8 @@ class ScriptGeneratorEngine:
         try:
             return json.loads(text)
         except json.JSONDecodeError as e:
-            print("[LỖI PARSE JSON]:", e)
-            print("Nội dung gốc:", text)
+            logger.error(f"[LỖI PARSE JSON]: {e}")
+            logger.info(f"Nội dung gốc: {text}")
             return []
 
     def develop_strategy(self, idea: IdeaJSON) -> str:
@@ -152,28 +154,28 @@ class ScriptGeneratorEngine:
         return scenes
 
     def generate_full_script(self, idea_id: int, idea: IdeaJSON) -> ScriptJSON:
-        print("\n[Engine] BƯỚC 1: AI (Deep Thinking) đang xây dựng CHIẾN LƯỢC KỂ CHUYỆN đỉnh cao...")
+        logger.info("\n[Engine] BƯỚC 1: AI (Deep Thinking) đang xây dựng CHIẾN LƯỢC KỂ CHUYỆN đỉnh cao...")
         strategy = self.develop_strategy(idea)
 
-        print("\n[Engine] BƯỚC 2: Đang yêu cầu AI lập Dàn ý dựa trên chiến lược...")
+        logger.info("\n[Engine] BƯỚC 2: Đang yêu cầu AI lập Dàn ý dựa trên chiến lược...")
         initial_chapters = self.generate_outline(idea, strategy)
 
         if not initial_chapters:
-            print("[Engine] Lỗi: Không thể sinh dàn ý. Vui lòng thử lại.")
+            logger.error("[Engine] Lỗi: Không thể sinh dàn ý. Vui lòng thử lại.")
             return ScriptJSON(idea_id=idea_id, estimated_total_duration=0, scenes=[])
 
-        print("\n[Engine] BƯỚC 3: AI (Critique Mode) đang đánh giá và NÂNG CẤP Dàn ý cho kịch tính hơn...")
+        logger.info("\n[Engine] BƯỚC 3: AI (Critique Mode) đang đánh giá và NÂNG CẤP Dàn ý cho kịch tính hơn...")
         chapters = self.refine_outline(idea, strategy, initial_chapters)
 
-        print(f"[Engine] -> Đã chốt được {len(chapters)} Chương xuất sắc. Chuẩn bị sinh chi tiết...")
+        logger.info(f"[Engine] -> Đã chốt được {len(chapters)} Chương xuất sắc. Chuẩn bị sinh chi tiết...")
 
         all_scenes = []
         global_scene_idx = 1
         total_duration = 0
 
-        print("\n[Engine] BƯỚC 4: Gọi AI viết chi tiết từng Chương (Áp dụng thủ thuật giữ chân khán giả)...")
+        logger.info("\n[Engine] BƯỚC 4: Gọi AI viết chi tiết từng Chương (Áp dụng thủ thuật giữ chân khán giả)...")
         for chap in chapters:
-            print(f"  -> Đang viết kịch bản cho Chương {chap.chapter_number}: {chap.title}")
+            logger.info(f"  -> Đang viết kịch bản cho Chương {chap.chapter_number}: {chap.title}")
             scenes = self.generate_chapter_scenes(idea, chapters, chap, strategy)
 
             for sc in scenes:

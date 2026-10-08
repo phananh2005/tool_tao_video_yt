@@ -1,3 +1,5 @@
+from core.logger import get_logger
+logger = get_logger(__name__)
 import json
 import re
 import os
@@ -99,11 +101,11 @@ class SEOOptimizerEngine:
         try:
             return json.loads(text)
         except json.JSONDecodeError as e:
-            print(f"[Engine] Lỗi Parse JSON SEO: {e}")
+            logger.error(f"[Engine] Lỗi Parse JSON SEO: {e}")
             return {}
 
     def format_upload_info(self, script_id: int, title: str, script_dict: dict, asset_dict: dict):
-        print("\n[Engine] Bước 1: Tính toán Timestamps Youtube...")
+        logger.info("\n[Engine] Bước 1: Tính toán Timestamps Youtube...")
         timestamps = self.calculate_timestamps(script_dict, asset_dict)
         
         # Gom nhóm nội dung từng chương để đặt tên
@@ -120,7 +122,7 @@ class SEOOptimizerEngine:
             lines_str = " ".join(lines[:3]) # lấy 3 ý đầu để AI nắm nội dung
             chapter_summaries_str += f"- Chương {c_num}: {lines_str}...\n"
             
-        print(f"[Engine] Bước 2: Gọi Gemini viết Tiêu đề, Mô tả và Tên Chương chuẩn SEO...")
+        logger.info(f"[Engine] Bước 2: Gọi Gemini viết Tiêu đề, Mô tả và Tên Chương chuẩn SEO...")
         summary = "Video về chủ đề " + title
         
         seo_data = self.generate_seo_metadata(title, summary, chapter_summaries_str)
@@ -136,7 +138,7 @@ class SEOOptimizerEngine:
             
         seo_data['title'] = formatted_title
             
-        print("[Engine] Bước 3: Ghép nối dữ liệu và xuất file Text...")
+        logger.info("[Engine] Bước 3: Ghép nối dữ liệu và xuất file Text...")
         
         ai_titles = seo_data.get('chapter_titles', [])
         chapter_names = {}
@@ -173,7 +175,7 @@ class SEOOptimizerEngine:
         # ==========================================
         # BƯỚC 4: TỰ ĐỘNG VẼ THUMBNAIL LUÔN (3 ẢNH)
         # ==========================================
-        print(f"\n[Engine] Bước 4: Yêu cầu AI vẽ {len(options)} Thumbnail dựa trên Concept...")
+        logger.info(f"\n[Engine] Bước 4: Yêu cầu AI vẽ {len(options)} Thumbnail dựa trên Concept...")
         thumbnail_paths = []
         for i, opt in enumerate(options):
             thumbnail_prompt = opt.get('thumbnail_concept', '')
@@ -184,15 +186,15 @@ class SEOOptimizerEngine:
                 
                 # Cấu trúc lại prompt cho việc vẽ Thumbnail
                 if thumbnail_text:
-                    full_thumb_prompt = f"Hãy tạo 1 bức ảnh TỶ LỆ 16:9 sắc nét, thiết kế chuyên biệt để làm Thumbnail Youtube. Nội dung: {thumbnail_prompt}. BẮT BUỘC chèn thật to, rõ ràng dòng chữ này (có thể là tiếng Việt) lên vị trí nổi bật nhất của ảnh: \"{thumbnail_text}\"."
+                    full_thumb_prompt = f"Thiết kế chuyên biệt để làm Thumbnail Youtube. Nội dung: {thumbnail_prompt}. BẮT BUỘC chèn thật to, rõ ràng dòng chữ này (có thể là tiếng Việt) lên vị trí nổi bật nhất của ảnh: \"{thumbnail_text}\"."
                 else:
-                    full_thumb_prompt = f"Hãy tạo 1 bức ảnh TỶ LỆ 16:9 sắc nét, thiết kế chuyên biệt để làm Thumbnail Youtube. Nội dung: {thumbnail_prompt}."
-                
-                print(f"[Engine] Đang vẽ Thumbnail {i+1}/{len(options)}...")
+                    full_thumb_prompt = f"Thiết kế chuyên biệt để làm Thumbnail Youtube. Nội dung: {thumbnail_prompt}."
+
+                logger.info(f"[Engine] Đang vẽ Thumbnail {i+1}/{len(options)}...")
                 self.adapter.generate_image(full_thumb_prompt, save_path=thumb_path)
                 
                 if os.path.exists(thumb_path):
-                    print(f"[Engine] => Thumbnail {i+1} đã được lưu tại: thumbnail_youtube_{i+1}.jpg")
+                    logger.info(f"[Engine] => Thumbnail {i+1} đã được lưu tại: thumbnail_youtube_{i+1}.jpg")
                     thumbnail_paths.append(f"data/projects/{script_id}/thumbnail_youtube_{i+1}.jpg")
         
         seo_data['thumbnail_paths'] = thumbnail_paths

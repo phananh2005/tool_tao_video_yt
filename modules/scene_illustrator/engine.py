@@ -1,4 +1,6 @@
 ﻿import json
+from core.logger import get_logger
+logger = get_logger(__name__)
 import os
 import sqlite3
 import time
@@ -52,7 +54,7 @@ class SceneIllustratorEngine:
         os.makedirs(project_dir, exist_ok=True)
         img_name = f"scene_{scene_number}.jpg"
         img_path = os.path.join(project_dir, img_name)
-        print(f"\n=> [Scene {scene_number}] Vẽ lại ảnh với Prompt: {prompt}")
+        logger.info(f"\n=> [Scene {scene_number}] Vẽ lại ảnh với Prompt: {prompt}")
 
         # Xóa file cũ nếu có để force lưu file mới (dù adapter.generate_image thường tự ghi đè)
         if os.path.exists(img_path):
@@ -64,14 +66,14 @@ class SceneIllustratorEngine:
         try:
             img_url = self.adapter.generate_image(prompt, save_path=img_path)
         except Exception as e:
-            print(f"  -> LỖI KHI VẼ ẢNH: {e}")
+            logger.error(f"  -> LỖI KHI VẼ ẢNH: {e}")
             img_url = None
 
         if img_url and os.path.exists(img_path):
-            print("  -> TẢI ẢNH THÀNH CÔNG!")
+            logger.info("  -> TẢI ẢNH THÀNH CÔNG!")
             return f"data/projects/{script_id}/{img_name}"
         else:
-            print("  -> LỖI: Trình giả lập không thể sinh hoặc tải ảnh về.")
+            logger.error("  -> LỖI: Trình giả lập không thể sinh hoặc tải ảnh về.")
             return None
 
     def _get_existing_assets(self, script_id: int) -> dict:
@@ -124,11 +126,11 @@ class SceneIllustratorEngine:
 
         existing_assets = self._get_existing_assets(script_id)
 
-        print(f"\n[Engine] BƯỚC 1: Xây dựng Giám đốc Nghệ thuật (Art Direction) cho toàn bộ video...")
+        logger.info(f"\n[Engine] BƯỚC 1: Xây dựng Giám đốc Nghệ thuật (Art Direction) cho toàn bộ video...")
         art_direction = self.develop_art_direction(all_scenes)
-        print(f"  -> Phong cách chủ đạo: {art_direction}")
+        logger.info(f"  -> Phong cách chủ đạo: {art_direction}")
 
-        print(f"\n[Engine] BƯỚC 2: Tối ưu hóa Image Prompts (Chuyển đổi ý tưởng thành cú pháp vẽ ảnh chuyên nghiệp) & Vẽ ảnh...")
+        logger.info(f"\n[Engine] BƯỚC 2: Tối ưu hóa Image Prompts (Chuyển đổi ý tưởng thành cú pháp vẽ ảnh chuyên nghiệp) & Vẽ ảnh...")
         final_assets = []
 
         for sc in all_scenes:
@@ -148,6 +150,7 @@ class SceneIllustratorEngine:
             - Combine the visual concept and narration into one cohesive, highly descriptive visual scene.
             - Focus on composition, subject action, camera angle, and the exact art style provided.
             - Do not include text, words, logos, or letters in the image.
+            - AVOID ANY SENSITIVE CONTENT: Do not include real people, real politicians, violence, gore, nudity, or controversial topics. If the scene involves humans in a potentially sensitive context, replace them with cute animals, robots, or stick figures to ensure AI safety filters are not triggered.
             - Output ONLY the final image prompt text in English, nothing else. Maximum 100 words.
             """
             optimized_concept = self.adapter.generate_text(optimize_prompt, expected_format='text').strip()
@@ -164,8 +167,8 @@ class SceneIllustratorEngine:
             img_name = f"scene_{s_num}.jpg"
             img_path = os.path.join(project_dir, img_name)
 
-            print(f"\n=> [Scene {s_num}] Original: {visual_concept}")
-            print(f"  -> AI Optimized Prompt: {optimized_concept}")
+            logger.info(f"\n=> [Scene {s_num}] Original: {visual_concept}")
+            logger.info(f"  -> AI Optimized Prompt: {optimized_concept}")
 
             if (
                 os.path.exists(img_path)
@@ -176,7 +179,7 @@ class SceneIllustratorEngine:
                 and existing_scene.get('image_prompt') == image_prompt
                 and existing_scene.get('image_path') == f"data/projects/{script_id}/{img_name}"
             ):
-                print("  -> Ảnh đã tồn tại với prompt hiện tại (Skip).")
+                logger.info("  -> Ảnh đã tồn tại với prompt hiện tại (Skip).")
                 rel_path = f"data/projects/{script_id}/{img_name}"
                 final_assets.append(AssetSceneJSON(scene_number=s_num, image_prompt=image_prompt, image_path=rel_path))
                 continue
@@ -184,15 +187,15 @@ class SceneIllustratorEngine:
             try:
                 img_url = self.adapter.generate_image(image_prompt, save_path=img_path)
             except Exception as e:
-                print(f"  -> LỖI KHI VẼ ẢNH: {e}")
+                logger.error(f"  -> LỖI KHI VẼ ẢNH: {e}")
                 img_url = None
 
             if img_url and os.path.exists(img_path):
-                print("  -> TẢI ẢNH THÀNH CÔNG!")
+                logger.info("  -> TẢI ẢNH THÀNH CÔNG!")
                 rel_path = f"data/projects/{script_id}/{img_name}"
                 final_assets.append(AssetSceneJSON(scene_number=s_num, image_prompt=image_prompt, image_path=rel_path))
             else:
-                print("  -> LỖI: Gemini từ chối vẽ ảnh hoặc không thể trích xuất/tải ảnh về.")
+                logger.error("  -> LỖI: Gemini từ chối vẽ ảnh hoặc không thể trích xuất/tải ảnh về.")
                 final_assets.append(AssetSceneJSON(scene_number=s_num, image_prompt=image_prompt, image_path=""))
 
             time.sleep(5)

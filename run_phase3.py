@@ -1,4 +1,6 @@
 ﻿import sys
+from core.logger import get_logger
+logger = get_logger(__name__)
 import os
 
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
@@ -12,12 +14,12 @@ def main():
     
     scripts = get_scripts_without_voiceover()
     if not scripts:
-        print("\n=> Không có Kịch bản (Script) nào đang chờ tạo lời thoại.")
+        logger.info("\n=> Không có Kịch bản (Script) nào đang chờ tạo lời thoại.")
         return
         
-    print("\n=== DANH SÁCH KỊCH BẢN CHƯA CÓ LỜI THOẠI (VOICEOVER) ===")
+    logger.info("\n=== DANH SÁCH KỊCH BẢN CHƯA CÓ LỜI THOẠI (VOICEOVER) ===")
     for row in scripts:
-        print(f"[{row['script_id']}] - Chủ đề: {row['title']}")
+        logger.info(f"[{row['script_id']}] - Chủ đề: {row['title']}")
         
     choice = input("\nNhập số ID của Kịch bản muốn tạo lời thoại: ").strip()
     if not choice.isdigit():
@@ -27,11 +29,11 @@ def main():
     script_dict = get_script_by_id(script_id)
     
     if not script_dict:
-        print("=> Lỗi: ID không hợp lệ.")
+        logger.error("=> Lỗi: ID không hợp lệ.")
         return
         
     title_for_vo = next((r['title'] for r in scripts if r['script_id'] == script_id), "Unknown")
-    print(f"\n=> Bắt đầu tạo lời thoại cho: '{title_for_vo}'")
+    logger.info(f"\n=> Bắt đầu tạo lời thoại cho: '{title_for_vo}'")
     
     adapter = GeminiWebAdapter()
     engine = VoiceoverEngine(adapter=adapter)
@@ -39,24 +41,24 @@ def main():
     vo_obj = engine.generate_full_voiceover(script_id, script_dict, title_for_vo)
     
     if not vo_obj.voiceover_scenes:
-        print("=> Lỗi: Sinh lời thoại thất bại.")
+        logger.error("=> Lỗi: Sinh lời thoại thất bại.")
         return
         
-    print("\n" + "="*50)
-    print("=== HOÀN TẤT: PREVIEW LỜI THOẠI (VOICEOVER) ===")
-    print("="*50)
-    print(f"Đã tạo lời thoại cho {len(vo_obj.voiceover_scenes)} phân cảnh.\n")
+    logger.info("\n" + "="*50)
+    logger.info("=== HOÀN TẤT: PREVIEW LỜI THOẠI (VOICEOVER) ===")
+    logger.info("="*50)
+    logger.info(f"Đã tạo lời thoại cho {len(vo_obj.voiceover_scenes)} phân cảnh.\n")
     
     for vo in vo_obj.voiceover_scenes[:5]: # Preview 5 cảnh đầu
-        print(f"🎙️ [Scene {vo.scene_number}]")
-        print(f"   {vo.spoken_text}")
-        print("-" * 40)
+        logger.info(f"🎙️ [Scene {vo.scene_number}]")
+        logger.info(f"   {vo.spoken_text}")
+        logger.info("-" * 40)
     
     if len(vo_obj.voiceover_scenes) > 5:
-        print("  ... (Còn tiếp)")
+        logger.info("  ... (Còn tiếp)")
         
     save_voiceover(script_id, vo_obj)
-    print(f"\n=> [THÀNH CÔNG] Đã lưu Voiceover cho Script ID {script_id} vào Database.")
+    logger.info(f"\n=> [THÀNH CÔNG] Đã lưu Voiceover cho Script ID {script_id} vào Database.")
 
 if __name__ == '__main__':
     main()
