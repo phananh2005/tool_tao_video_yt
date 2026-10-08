@@ -6,21 +6,31 @@ import json
 import subprocess
 import asyncio
 import time
+import random
 from core.database import DB_PATH
 
 async def _generate_audio(text: str, output_path: str, voice: str = "vi-VN-HoaiMyNeural"):
     import edge_tts
-    max_retries = 3
+    max_retries = 5  # Tăng số lần thử lại
+    proxy = os.environ.get('EDGE_TTS_PROXY') # Hỗ trợ xoay proxy nếu người dùng thiết lập biến môi trường này
+    
     for attempt in range(max_retries):
         try:
-            communicate = edge_tts.Communicate(text, voice)
+            if proxy:
+                communicate = edge_tts.Communicate(text, voice, proxy=proxy)
+            else:
+                communicate = edge_tts.Communicate(text, voice)
             await communicate.save(output_path)
             return
         except Exception as e:
             if attempt == max_retries - 1:
+                logger.error(f"      [!] Đã thử {max_retries} lần nhưng vẫn thất bại: {e}")
                 raise e
-            logger.error(f"      [!] Lỗi sinh audio (lần {attempt + 1}): {e}. Thử lại sau {2 ** attempt}s...")
-            await asyncio.sleep(2 ** attempt)
+            
+            # Thời gian chờ tăng dần (Exponential backoff) kết hợp nhiễu ngẫu nhiên (Jitter)
+            wait_time = (2 ** attempt) + random.uniform(1.0, 3.0)
+            logger.warning(f"      [!] Lỗi sinh audio (lần {attempt + 1}): {e}. Thử lại sau {wait_time:.1f}s...")
+            await asyncio.sleep(wait_time)
 
 def get_audio_duration(file_path: str) -> float:
     try:
@@ -84,7 +94,7 @@ class VoiceSynthesizer:
             logger.info(f"  -> Đang thu âm Scene {s_num}: {text[:40]}...")
             if not (os.path.exists(audio_path) and os.path.getsize(audio_path) > 0):
                 asyncio.run(_generate_audio(text, audio_path))
-                time.sleep(1) # Nghỉ 1 giây để tránh bị block WebSocket
+                time.sleep(random.uniform(2.0, 4.0)) # Nghỉ ngẫu nhiên 2-4 giây để tránh bị block WebSocket do rate limit
                 
             actual_duration = get_audio_duration(audio_path)
             self._update_asset_duration(script_id, s_num, actual_duration, audio_name)
