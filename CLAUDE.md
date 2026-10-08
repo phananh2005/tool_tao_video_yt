@@ -26,7 +26,7 @@ Các quy tắc MUST / NEVER / BEFORE / AFTER dưới đây đè lên mọi hành
 ## 2. Tổng quan dự án
 TubeChain là công cụ sản xuất video YouTube theo hướng ưu tiên chạy tại máy người dùng. Mã nguồn dùng Python + FastAPI (`app.py`), SQLite (`core/database.py`), giao diện tĩnh (`web/`), module pipeline (`modules/`) và pytest (`tests/`). FFmpeg dùng ghép video cơ bản. Trước khi giả định dependency, hãy xác minh từ file.
 
-**Pipeline sản phẩm:** (1) Idea Engine, (2) Script Generator, (3) Voiceover Writer (chỉ tạo text), (4) Scene Illustrator, (5) Video Assembler, (6) SEO Optimizer. *Lưu ý: Luồng tổng hợp giọng nói Phase 3.5 hiện có là giai đoạn cũ, không lẫn lộn với Phase 3.*
+**Pipeline sản phẩm:** (1) Idea Engine, (2) Script Generator, (3) Voiceover Writer (sinh kịch bản lời thoại), (3.5) Audio Synthesizer (tạo file âm thanh qua TTS), (4) Scene Illustrator, (5) Video Assembler, (6) SEO Optimizer. *Lưu ý: Phase 3 và Phase 3.5 là 2 bước nối tiếp nhau trong cùng pipeline; AI cần phân biệt rõ sửa text (engine.py) hay sửa audio (synthesizer.py).*
 
 ## 3. Ràng buộc sản phẩm bắt buộc
 - **Local first:** Giao diện/API cục bộ và SQLite; tuyệt đối không tự thêm cloud DB hay lưu trữ từ xa.
