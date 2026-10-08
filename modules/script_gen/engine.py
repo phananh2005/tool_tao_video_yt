@@ -66,8 +66,8 @@ class ScriptGeneratorEngine:
         - Phải chia chương này thành 10 đến 15 phân cảnh (Scenes) ngắn.
         - Mỗi cảnh CHỈ KÉO DÀI khoảng 5 đến 8 giây. Việc chia nhỏ này giúp video thay đổi hình ảnh liên tục, 1 scene = 1 hình ảnh mới, tránh nhàm chán cho người xem.
         - `narration_outline` (dàn ý lời bình) cung cấp từ 1-2 gạch đầu dòng rất ngắn gọn phù hợp với thời lượng 5-8 giây.
-        - Nếu đây là chương "Hook & Intro" (thường là Chương 1), phân cảnh đầu tiên phải mang tính thu hút, mở đầu video mạnh mẽ.
-        - Nếu đây là chương "CTA & Outro" (thường là chương cuối), phân cảnh cuối phải bao gồm lời kêu gọi hành động (like, subscribe) và kết thúc video.
+        - Nếu đây là chương "Hook & Intro" (thường là Chương 1), phân cảnh đầu tiên phải mang tính thu hút, mở đầu video mạnh mẽ. KHÔNG yêu cầu logo kênh cụ thể.
+        - Nếu đây là chương "CTA & Outro" (thường là chương cuối), phân cảnh cuối phải bao gồm lời kêu gọi hành động (like, subscribe) và kết thúc video. Tuyệt đối KHÔNG yêu cầu vẽ/hiển thị logo kênh cụ thể trong visual_concept vì tool này chạy cho nhiều kênh khác nhau.
         - TRẢ VỀ DUY NHẤT MỘT MẢNG JSON HỢP LỆ. KHÔNG BAO GỒM GIẢI THÍCH.
         
         Định dạng bắt buộc:

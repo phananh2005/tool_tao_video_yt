@@ -439,7 +439,15 @@ def get_assets(script_id: int):
     conn.close()
     if not row:
         raise HTTPException(status_code=404, detail="Assets not found")
-    return json.loads(row[0])
+
+    asset_data = json.loads(row[0])
+    # Kiểm tra xem file ảnh có thực sự tồn tại trên ổ cứng không, nếu bị xóa mất thì reset image_path
+    for a_sc in asset_data.get('assets', []):
+        img_path = a_sc.get('image_path')
+        if img_path and not os.path.exists(img_path):
+            a_sc['image_path'] = ""
+
+    return asset_data
 
 @app.put("/api/assets/{script_id}")
 def update_assets(script_id: int, req: UpdateAssetRequest):
