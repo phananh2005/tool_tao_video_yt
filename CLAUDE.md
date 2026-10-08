@@ -36,7 +36,9 @@ TubeChain là công cụ sản xuất video YouTube theo hướng ưu tiên ch�
 - **AI Provider:** Mọi thao tác AI chạy qua provider adapter hiện có. Không ghi cứng thông tin xác thực. Subagent chỉ hỗ trợ phát triển mã, không tham gia runtime tạo video.
 
 ## 4. Phân quyền Agent (Định tuyến)
-Chỉ dùng subagent khi tạo giá trị; không ép thay đổi nhỏ qua nhiều agent. Trong runtime user, alias `opus` = Gemini 3.1 Pro, `sonnet` = Gemini 3.8 Flash (giữ nguyên alias trong frontmatter, không ghi đè provider ID).
+Với các sửa đổi cục bộ (fix bug, refactor code), agent hiện tại tự xử lý để tiết kiệm thời gian. Tuy nhiên, **TUYỆT ĐỐI TUÂN THỦ HỢP ĐỒNG TỐI CAO**: bất cứ thay đổi nào chạm đến schema, contract, prompt, hay chiến lược (dù nhỏ đến đâu) đều bắt buộc phải gọi agent chuyên trách tương ứng qua `SendMessage`. 
+
+Trong runtime user, alias `opus` = Gemini 3.1 Pro, `sonnet` = Gemini 3.8 Flash (giữ nguyên alias trong frontmatter, không ghi đè provider ID).
 
 | Agent | Bí danh | Trách nhiệm (Gọi qua SendMessage) |
 |---|---|---|
