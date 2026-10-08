@@ -50,10 +50,11 @@ class VoiceoverEngine:
         YÊU CẦU DÀNH CHO BẠN:
         {task_str}
         
-        Phong cách (Tone): 
+        Phong cách (Tone):
         - Gần gũi, cuốn hút, bí ẩn hoặc tạo động lực tùy theo bối cảnh.
         - Xưng "mình" / "chúng ta" và gọi khán giả là "các bạn".
         - Viết câu văn hoàn chỉnh, mượt mà để thu âm. Đừng chỉ copy lại dàn ý. Mỗi scene nên viết khoảng 3-5 câu văn dài.
+        - QUAN TRỌNG VỀ PHÁT ÂM (TTS): TUYỆT ĐỐI KHÔNG dùng ký tự đặc biệt, ký hiệu toán học, hoặc số dạng phân số/phần trăm (ví dụ: 1/3, 50%, +, &). Bắt buộc phải viết mọi con số, phần trăm, phân số và ký hiệu thành CHỮ hoàn toàn bằng tiếng Việt (ví dụ: "một phần ba" thay vì "1/3", "năm mươi phần trăm" thay vì "50%", "và" thay vì "&") để công cụ AI phát âm chuẩn xác ý nghĩa nhất.
         
         Định dạng bắt buộc: Trả về DUY NHẤT một mảng JSON hợp lệ, KHÔNG giải thích, KHÔNG markdown.
         [

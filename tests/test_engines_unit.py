@@ -36,8 +36,10 @@ class StubAdapter(AIProviderContract):
     def __init__(self, text_response="[]", image_response=""):
         self._text = text_response
         self._image = image_response
+        self.last_prompt = ""
 
     def generate_text(self, prompt, expected_format='json'):
+        self.last_prompt = prompt
         return self._text
 
     def generate_image(self, prompt, **kwargs):
@@ -109,6 +111,8 @@ def test_voiceover_engine_full():
     assert vo.script_id == 1
     assert len(vo.voiceover_scenes) == 1
     assert vo.voiceover_scenes[0].spoken_text == "Hello world"
+    # Ensure our new TTS rules are present in the prompt
+    assert "QUAN TRỌNG VỀ PHÁT ÂM (TTS): TUYỆT ĐỐI KHÔNG dùng ký tự đặc biệt" in adapter.last_prompt
 
 
 # ==================== SceneIllustratorEngine ====================

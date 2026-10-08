@@ -12,8 +12,9 @@ class SEOOptimizerEngine:
         # Mapping thời gian thực tế từ Asset
         actual_durations = {}
         for a_sc in asset_dict.get('assets', []):
-            actual_durations[a_sc['scene_number']] = a_sc.get('duration_seconds', 10)
-            
+            dur = a_sc.get('duration_seconds')
+            actual_durations[a_sc['scene_number']] = dur if dur is not None else 10
+
         timestamps = []
         current_time_seconds = 0
         
@@ -23,8 +24,10 @@ class SEOOptimizerEngine:
         for sc in script_dict.get('scenes', []):
             c_num = sc.get('chapter_number', 1)
             s_num = sc['scene_number']
-            duration = actual_durations.get(s_num, 10)
-            
+            duration = actual_durations.get(s_num)
+            if duration is None:
+                duration = 10
+
             # Ghi nhận thời gian mỗi khi chuyển qua chương mới
             if current_chapter != c_num:
                 mins, secs = divmod(int(current_time_seconds), 60)

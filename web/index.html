@@ -17,8 +17,13 @@
         <header class="bg-blue-600 text-white p-4 shadow">
             <div class="container mx-auto flex justify-between items-center">
                 <h1 class="text-2xl font-bold cursor-pointer" @click="goDashboard">TubeChain</h1>
-                <div v-if="currentProject">
-                    <span class="font-medium">Project:</span> {{ currentProject.name }}
+                <div class="flex items-center gap-6">
+                    <label class="flex items-center gap-2 cursor-pointer text-sm font-semibold bg-blue-700 hover:bg-blue-800 px-3 py-1.5 rounded transition-colors">
+                        <input type="checkbox" v-model="autoTransition" class="w-4 h-4"> Tự động chạy Pipeline
+                    </label>
+                    <div v-if="currentProject">
+                        <span class="font-medium">Project:</span> {{ currentProject.name }}
+                    </div>
                 </div>
             </div>
         </header>
@@ -255,6 +260,7 @@
                     <div class="flex items-center gap-4">
                         <span v-if="isAssetDirty" class="text-yellow-600 font-semibold text-sm">⚠️ Có thay đổi chưa lưu</span>
                         <button @click="saveAssets" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded">Lưu Dữ Liệu</button>
+                        <button @click="continueGenerateAssets" class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded font-bold">🖌️ Vẽ Tiếp Ảnh Thiếu</button>
                         <button @click="generateAssets" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded font-bold">🎨 Vẽ Lại Toàn Bộ</button>
                         <button @click="renderVideo" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded font-bold shadow">Render Video ➡️</button>
                     </div>
@@ -405,6 +411,7 @@
         createApp({
             data() {
                 return {
+                    autoTransition: false,
                     currentScreen: 'dashboard',
                     projects: [],
                     newTheme: '',
@@ -608,6 +615,9 @@
                         this.currentProject.current_script_id = data.script_id;
                         this.scriptData = data.script;
                         this.currentScreen = 'phase2';
+                        if (this.autoTransition) {
+                            setTimeout(() => this.generateVoiceover(), 500);
+                        }
                     });
                 },
                 async loadScript(scriptId) {
@@ -631,6 +641,9 @@
                         this.voiceoverData.is_synthesized = false;
                         this.isVoiceoverDirty = false;
                         this.currentScreen = 'phase3';
+                        if (this.autoTransition) {
+                            setTimeout(() => this.synthesizeVoice(), 500);
+                        }
                     });
                 },
                 async loadVoiceover(scriptId) {
@@ -654,7 +667,11 @@
                         if (this.voiceoverData) {
                             this.voiceoverData.is_synthesized = true;
                         }
-                        alert('Đã tổng hợp toàn bộ âm thanh thành công!');
+                        if (this.autoTransition) {
+                            setTimeout(() => this.enterPhase4(), 500);
+                        } else {
+                            alert('Đã tổng hợp toàn bộ âm thanh thành công!');
+                        }
                         try {
                             this.assetData = await this.apiCall("/api/assets/" + this.currentProject.current_script_id, 'GET', null, true);
                         } catch(e) {}
@@ -668,6 +685,9 @@
                         } catch (e) {
                             await this.apiCall("/api/phase4/generate/" + this.currentProject.current_script_id, 'POST');
                             await this.loadAssets(this.currentProject.current_script_id);
+                            if (this.autoTransition) {
+                                setTimeout(() => this.renderVideo(), 500);
+                            }
                         }
                     });
                 },
@@ -675,6 +695,34 @@
                     this.withLoading('Đang vẽ hình ảnh...', async () => {
                         await this.apiCall("/api/phase4/generate/" + this.currentProject.current_script_id, 'POST');
                         await this.loadAssets(this.currentProject.current_script_id);
+                    });
+                },
+                async continueGenerateAssets() {
+                    const missingScenes = this.assetData.assets.filter(s => !s.image_path);
+                    if (missingScenes.length === 0) {
+                        alert("Đã đủ ảnh cho tất cả các cảnh, không có gì để vẽ tiếp!");
+                        return;
+                    }
+                    this.withLoading('Đang vẽ tiếp ảnh còn thiếu...', async () => {
+                        let successCount = 0;
+                        for (const scene of missingScenes) {
+                            try {
+                                const res = await this.apiCall(`/api/phase4/generate/${this.currentProject.current_script_id}/${scene.scene_number}`, 'POST', { image_prompt: scene.image_prompt }, true);
+                                if (res && res.status === 'success') {
+                                    scene.image_path = res.image_path;
+                                    this.imageCacheVersion++;
+                                    successCount++;
+                                }
+                            } catch (e) {
+                                console.error(`Lỗi khi vẽ cảnh ${scene.scene_number}:`, e);
+                            }
+                        }
+                        if (successCount > 0) {
+                            await this.saveAssets(); // Lưu dữ liệu sau khi vẽ thành công
+                        }
+                        if (successCount < missingScenes.length) {
+                            alert(`Chỉ vẽ thành công ${successCount}/${missingScenes.length} ảnh. Vui lòng thử lại sau.`);
+                        }
                     });
                 },
                 async regenerateImage(scene) {
@@ -702,7 +750,10 @@
                 },
                 async renderVideo() {
                     this.currentScreen = 'phase5';
-                    this.checkRenderStatus();
+                    await this.checkRenderStatus();
+                    if (this.autoTransition && this.renderStatus === 'idle') {
+                        setTimeout(() => this.startRenderStream(), 500);
+                    }
                 },
                 async checkRenderStatus() {
                     try {
@@ -750,6 +801,9 @@
                                             this.renderStatus = 'done';
                                             this.videoCacheVersion++;
                                             setTimeout(() => this.checkRenderStatus(), 500);
+                                            if (this.autoTransition) {
+                                                setTimeout(() => this.generateSEO(), 1000);
+                                            }
                                         } else if (msg === '[ERROR]') {
                                             this.renderLogs.push('=> Đã xảy ra lỗi khi render.');
                                             this.renderStatus = 'idle';

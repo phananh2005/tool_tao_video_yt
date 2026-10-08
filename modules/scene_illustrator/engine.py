@@ -23,7 +23,12 @@ class SceneIllustratorEngine:
             except Exception:
                 pass
                 
-        img_url = self.adapter.generate_image(prompt, save_path=img_path)
+        try:
+            img_url = self.adapter.generate_image(prompt, save_path=img_path)
+        except Exception as e:
+            print(f"  -> LỖI KHI VẼ ẢNH: {e}")
+            img_url = None
+
         if img_url and os.path.exists(img_path):
             print("  -> TẢI ẢNH THÀNH CÔNG!")
             return f"data/projects/{script_id}/{img_name}"
@@ -116,7 +121,11 @@ class SceneIllustratorEngine:
                 final_assets.append(AssetSceneJSON(scene_number=s_num, image_prompt=image_prompt, image_path=rel_path))
                 continue
 
-            img_url = self.adapter.generate_image(image_prompt, save_path=img_path)
+            try:
+                img_url = self.adapter.generate_image(image_prompt, save_path=img_path)
+            except Exception as e:
+                print(f"  -> LỖI KHI VẼ ẢNH: {e}")
+                img_url = None
 
             if img_url and os.path.exists(img_path):
                 print("  -> TẢI ẢNH THÀNH CÔNG!")
@@ -124,6 +133,7 @@ class SceneIllustratorEngine:
                 final_assets.append(AssetSceneJSON(scene_number=s_num, image_prompt=image_prompt, image_path=rel_path))
             else:
                 print("  -> LỖI: Gemini từ chối vẽ ảnh hoặc không thể trích xuất/tải ảnh về.")
+                final_assets.append(AssetSceneJSON(scene_number=s_num, image_prompt=image_prompt, image_path=""))
 
             time.sleep(5)
 
