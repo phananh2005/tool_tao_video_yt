@@ -3,50 +3,115 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TubeChain Web UI</title>
+    <title>TubeChain Studio Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <style>
         [v-cloak] { display: none; }
-    </style>
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .gradient-text {
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .deep-thinking-badge {
+            animation: pulse-border 2s infinite;
+        }
+        @keyframes pulse-border {
+            0% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.4); }
+            70% { box-shadow: 0 0 0 6px rgba(139, 92, 246, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0); }
+        }
+    
+        .toast-enter-active, .toast-leave-active { transition: all 0.3s ease; }
+        .toast-enter-from { opacity: 0; transform: translateX(50px); }
+        .toast-leave-to { opacity: 0; transform: scale(0.9); }
+</style>
 </head>
-<body class="bg-gray-100 text-gray-800 font-sans">
+<body class="bg-slate-50 text-slate-800 font-sans selection:bg-blue-200 selection:text-blue-900">
     <div id="app" v-cloak class="min-h-screen flex flex-col">
 
         <!-- Header -->
-        <header class="bg-blue-600 text-white p-4 shadow">
+        <header class="bg-slate-900 text-white p-4 shadow-lg border-b border-slate-800 sticky top-0 z-40">
             <div class="container mx-auto flex justify-between items-center">
-                <h1 class="text-2xl font-bold cursor-pointer" @click="goDashboard">TubeChain</h1>
+                <h1 class="text-2xl font-extrabold cursor-pointer tracking-tight" @click="goDashboard">
+                    <span class="text-blue-500">Tube</span><span class="text-violet-400">Chain</span> <span class="text-sm font-medium text-slate-400 ml-2 border border-slate-700 rounded-full px-2 py-0.5">Studio Pro</span>
+                </h1>
                 <div class="flex items-center gap-6">
-                    <label class="flex items-center gap-2 cursor-pointer text-sm font-semibold bg-blue-700 hover:bg-blue-800 px-3 py-1.5 rounded transition-colors">
-                        <input type="checkbox" v-model="autoTransition" class="w-4 h-4"> Tự động chạy Pipeline
+                    <label class="flex items-center gap-2 cursor-pointer text-sm font-semibold bg-slate-800 hover:bg-slate-700 px-4 py-2 rounded-lg transition-all border border-slate-700">
+                        <input type="checkbox" v-model="autoTransition" class="w-4 h-4 accent-violet-500 rounded"> Tự động chạy Pipeline
                     </label>
-                    <div v-if="currentProject">
-                        <span class="font-medium">Project:</span> {{ currentProject.name }}
+                    <div v-if="currentProject" class="text-sm font-medium bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700">
+                        <span class="text-slate-400">Project:</span> <span class="text-violet-300">{{ currentProject.name }}</span>
                     </div>
                 </div>
             </div>
         </header>
 
         <!-- Main Content -->
-        <main class="container mx-auto p-4 flex-grow">
+        <main class="container mx-auto p-4 flex-grow max-w-6xl mt-4">
+
+            
+            <!-- TOAST NOTIFICATIONS -->
+            <div class="fixed top-20 right-4 z-50 flex flex-col gap-3 pointer-events-none">
+                <transition-group name="toast">
+                    <div v-for="t in toasts" :key="t.id"
+                         class="pointer-events-auto flex items-center gap-3 px-5 py-4 rounded-xl shadow-2xl border min-w-[300px] max-w-md transform transition-all"
+                         :class="{
+                             'bg-emerald-50 border-emerald-200 text-emerald-800': t.type === 'success',
+                             'bg-red-50 border-red-200 text-red-800': t.type === 'error',
+                             'bg-amber-50 border-amber-200 text-amber-800': t.type === 'warning',
+                             'bg-blue-50 border-blue-200 text-blue-800': t.type === 'info'
+                         }">
+                        <div class="text-xl">
+                            <span v-if="t.type === 'success'">✅</span>
+                            <span v-if="t.type === 'error'">❌</span>
+                            <span v-if="t.type === 'warning'">⚠️</span>
+                            <span v-if="t.type === 'info'">ℹ️</span>
+                        </div>
+                        <div class="font-bold flex-1">{{ t.message }}</div>
+                        <button @click="removeToast(t.id)" class="opacity-50 hover:opacity-100 p-1 text-xl font-bold">✕</button>
+                    </div>
+                </transition-group>
+            </div>
+
+            <!-- CONFIRM MODAL -->
+            <div v-if="confirmModal.isOpen" class="fixed inset-0 bg-slate-900 bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-50 transition-opacity">
+                <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full border border-slate-200 transform scale-100 animate-fade-in">
+                    <div class="flex items-center gap-4 mb-4">
+                        <div class="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center text-2xl border border-amber-200">⚠️</div>
+                        <h3 class="text-2xl font-black text-slate-800">{{ confirmModal.title }}</h3>
+                    </div>
+                    <p class="text-slate-600 font-medium mb-8 leading-relaxed">{{ confirmModal.message }}</p>
+                    <div class="flex gap-3 justify-end">
+                        <button @click="handleConfirm(false)" class="px-6 py-2.5 rounded-lg font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors">Hủy bỏ</button>
+                        <button @click="handleConfirm(true)" class="px-6 py-2.5 rounded-lg font-bold bg-amber-500 hover:bg-amber-600 text-white transition-colors shadow-sm">Đồng ý</button>
+                    </div>
+                </div>
+            </div>
 
             <!-- LOADING OVERLAY -->
-            <div v-if="loading" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                <div class="bg-white p-6 rounded shadow-lg text-center">
-                    <div class="text-2xl mb-4 animate-spin">⏳</div>
-                    <div class="text-lg font-bold">{{ loadingMsg }}</div>
+            <div v-if="loading" class="fixed inset-0 bg-slate-900 bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-50 transition-opacity">
+                <div class="bg-white p-8 rounded-2xl shadow-2xl text-center transform scale-100 max-w-sm w-full border border-slate-100">
+                    <div class="text-4xl mb-4 animate-spin inline-block text-violet-600">🌀</div>
+                    <div class="text-xl font-bold text-slate-800">{{ loadingMsg }}</div>
+                    <p class="text-sm text-slate-500 mt-2">Deep Thinking Pipeline đang hoạt động...</p>
                 </div>
             </div>
 
             <!-- DASHBOARD -->
-            <div v-if="currentScreen === 'dashboard'">
-                <h2 class="text-xl font-bold mb-4">Dashboard (Quản lý Dự án)</h2>
+            <div v-if="currentScreen === 'dashboard'" class="animate-fade-in">
+                <h2 class="text-3xl font-extrabold mb-6 text-slate-800">Dashboard</h2>
 
-                <div class="bg-white p-4 rounded shadow mb-6">
-                    <h3 class="font-bold mb-2">Tạo Dự án Mới</h3>
-                    <div class="flex flex-col gap-2">
-                        <select v-model="newTheme" class="border p-2 rounded bg-white">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-8 hover:shadow-md transition-shadow">
+                    <h3 class="font-bold text-lg mb-4 text-slate-800 flex items-center gap-2">✨ Khởi tạo Dự án Mới</h3>
+                    <div class="flex flex-col gap-4">
+                        <select v-model="newTheme" class="border border-slate-300 p-3 rounded-lg bg-slate-50 font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-all">
                             <option value="" disabled>-- Chọn 1 trong 6 Trụ cột Chủ đề --</option>
                             <option value="Những điều thú vị, kỳ lạ, có thể bạn chưa biết">1. Những điều thú vị, kỳ lạ, có thể bạn chưa biết</option>
                             <option value="Tâm lý học hành vi">2. Tâm lý học hành vi</option>
@@ -55,45 +120,64 @@
                             <option value="Sức khỏe &amp; Ăn uống">5. Sức khỏe &amp; Ăn uống</option>
                             <option value="Bí ẩn thế giới &amp; Sự thật về cơ thể người">6. Bí ẩn thế giới &amp; Sự thật về cơ thể người</option>
                         </select>
-                        <div class="flex items-center justify-between mt-2">
-                            <label class="flex items-center gap-2 font-bold cursor-pointer">
-                                <input type="checkbox" v-model="isRabbitHole" class="w-5 h-5"> Yêu cầu tạo chuỗi Rabbit Hole (3 phần liên kết)
+                        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-slate-50 p-4 rounded-lg border border-slate-100">
+                            <label class="flex items-center gap-3 font-semibold cursor-pointer text-slate-700">
+                                <input type="checkbox" v-model="isRabbitHole" class="w-5 h-5 accent-violet-600 rounded">
+                                <span>Tạo chuỗi Rabbit Hole <span class="bg-violet-100 text-violet-700 text-xs px-2 py-0.5 rounded-full ml-1">3 Phần</span></span>
                             </label>
-                            <button @click="brainstorm" class="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600 font-bold shadow">🚀 Khởi tạo &amp; Brainstorm</button>
+                            <button @click="brainstorm" class="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-violet-600 text-white px-8 py-3 rounded-lg hover:from-blue-700 hover:to-violet-700 font-bold shadow-lg transform transition hover:-translate-y-0.5 flex items-center justify-center gap-2">
+                                🚀 AI Brainstorm
+                            </button>
                         </div>
                     </div>
                 </div>
 
-                <div class="bg-white p-4 rounded shadow">
-                    <h3 class="font-bold mb-2">Dự án Hiện tại</h3>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                    <h3 class="font-bold text-lg mb-4 text-slate-800 flex items-center gap-2">📂 Dự án Hiện tại</h3>
                     <div class="space-y-4">
-                        <div v-for="p in projects" :key="p.id" class="bg-gray-50 border p-4 rounded shadow-sm">
-                            <div class="flex justify-between items-center border-b pb-3 mb-3">
-                                <div>
-                                    <span class="font-bold text-lg">{{ p.name }}</span>
-                                    <span class="text-sm text-gray-500 ml-2">ID: {{ p.id }} | {{ p.created_at }}</span>
+                        <div v-for="p in projects" :key="p.id" class="bg-white border border-slate-200 rounded-xl overflow-hidden hover:border-slate-300 transition-colors">
+                            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-50 p-4 border-b border-slate-200">
+                                <div class="mb-3 sm:mb-0">
+                                    <span class="font-bold text-lg text-slate-800">{{ p.name }}</span>
+                                    <div class="text-xs text-slate-500 mt-1 font-mono">ID: {{ p.id }} • {{ p.created_at }}</div>
                                 </div>
-                                <div>
-                                    <button @click="openIdeaBank(p)" class="bg-yellow-500 text-white px-3 py-1 rounded text-sm font-bold mr-2">💡 Kho Ý Tưởng ({{ p.unused_ideas_count }})</button>
-                                    <button @click="deleteMedia(p)" class="bg-red-500 text-white px-3 py-1 rounded text-sm">Dọn Media Theme</button>
+                                <div class="flex gap-2 w-full sm:w-auto">
+                                    <button @click="openIdeaBank(p)" class="flex-1 sm:flex-none bg-amber-100 text-amber-700 hover:bg-amber-200 px-4 py-2 rounded-lg text-sm font-bold transition-colors border border-amber-200 shadow-sm flex items-center justify-center gap-2">
+                                        💡 Kho Ý Tưởng <span class="bg-amber-500 text-white text-xs px-1.5 py-0.5 rounded-full">{{ p.unused_ideas_count }}</span>
+                                    </button>
+                                    <button @click="deleteMedia(p)" class="bg-red-50 text-red-600 hover:bg-red-100 px-3 py-2 rounded-lg text-sm transition-colors border border-red-100" title="Dọn Media">
+                                        🗑️
+                                    </button>
                                 </div>
                             </div>
 
-                            <div v-if="p.active_scripts.length === 0" class="text-center text-gray-500 py-2">
-                                Chưa có video nào đang sản xuất. Hãy vào Kho Ý Tưởng để bắt đầu.
-                            </div>
-                            <div v-else class="space-y-2">
-                                <div v-for="sc in p.active_scripts" :key="sc.script_id"
-                                     :class="{'border-l-4 border-purple-500 bg-purple-100': sc.rabbit_hole_series, 'border border-gray-300 bg-white': !sc.rabbit_hole_series}"
-                                     class="p-3 rounded flex justify-between items-center shadow-sm">
-                                    <div>
-                                        <span v-if="sc.rabbit_hole_series" class="bg-purple-600 text-white text-xs px-2 py-1 rounded mr-2 font-bold">Phần {{ sc.part_number }}/3</span>
-                                        <span class="font-semibold">{{ sc.title }}</span>
-                                    </div>
-                                    <div class="flex items-center gap-3">
-                                        <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm font-mono font-bold">Phase {{ sc.phase }}</span>
-                                        <button @click="resumeScript(p, sc)" class="bg-green-600 text-white px-3 py-1 rounded text-sm font-bold">Vào Phase {{ sc.phase }}</button>
-                                        <button @click="deleteScriptMedia(sc.script_id)" class="text-red-500 text-sm font-semibold hover:underline">Xóa Media</button>
+                            <div class="p-4">
+                                <div v-if="p.active_scripts.length === 0" class="text-center text-slate-400 py-4 font-medium italic">
+                                    Chưa có video nào đang sản xuất. Hãy vào Kho Ý Tưởng để bắt đầu.
+                                </div>
+                                <div v-else class="space-y-3">
+                                    <div v-for="sc in p.active_scripts" :key="sc.script_id"
+                                         class="group flex flex-col md:flex-row justify-between items-start md:items-center p-3 rounded-lg border transition-all"
+                                         :class="{'border-violet-300 bg-violet-50 shadow-sm': sc.rabbit_hole_series, 'border-slate-200 bg-white hover:border-slate-300': !sc.rabbit_hole_series}">
+
+                                        <div class="mb-3 md:mb-0 flex items-start gap-2">
+                                            <span v-if="sc.rabbit_hole_series" class="bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white text-xs px-2.5 py-1 rounded-md font-bold whitespace-nowrap shadow-sm">
+                                                Phần {{ sc.part_number }}/3
+                                            </span>
+                                            <span class="font-semibold text-slate-800 line-clamp-2" :class="{'pt-0.5': sc.rabbit_hole_series}">{{ sc.title }}</span>
+                                        </div>
+
+                                        <div class="flex items-center gap-3 w-full md:w-auto justify-end border-t md:border-t-0 pt-3 md:pt-0">
+                                            <span class="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-xs font-mono font-bold border border-slate-200">
+                                                Phase {{ sc.phase }}
+                                            </span>
+                                            <button @click="resumeScript(p, sc)" class="bg-slate-800 text-white hover:bg-slate-900 px-4 py-1.5 rounded-lg text-sm font-bold shadow-sm transition-colors flex items-center gap-1">
+                                                Tiếp tục <span class="text-slate-400">→</span>
+                                            </button>
+                                            <button @click="deleteScriptMedia(sc.script_id)" class="text-slate-400 hover:text-red-500 p-1.5 rounded transition-colors" title="Xóa Media">
+                                                ❌
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -103,64 +187,82 @@
             </div>
 
             <!-- PHASE 1: IDEA FACTORY -->
-            <div v-if="currentScreen === 'phase1'">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-xl font-bold">💡 Phase 1: Idea Factory (Kho Ý Tưởng)</h2>
-                    <button @click="goDashboard" class="text-blue-500 underline font-semibold hover:text-blue-700">Quay lại Dashboard</button>
+            <div v-if="currentScreen === 'phase1'" class="animate-fade-in">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+                    <div>
+                        <h2 class="text-3xl font-extrabold gradient-text">💡 Phase 1: Idea Factory</h2>
+                        <p class="text-sm text-slate-500 font-medium mt-1">Deep Thinking AI Strategy applied</p>
+                    </div>
+                    <button @click="goDashboard" class="bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-lg font-semibold text-sm transition-colors shadow-sm flex items-center gap-2">
+                        <span>←</span> Quay lại Dashboard
+                    </button>
                 </div>
 
-                <div class="bg-white p-4 rounded shadow">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="font-bold text-lg">Ý tưởng khả dụng</h3>
-                        <span class="text-sm text-gray-500">Tổng cộng: {{ currentIdeas.length }}</span>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                    <div class="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
+                        <h3 class="font-bold text-xl text-slate-800">Kho Ý tưởng Khả dụng</h3>
+                        <span class="bg-blue-100 text-blue-800 font-bold px-3 py-1 rounded-full text-sm">{{ currentIdeas.length }} ideas</span>
                     </div>
 
-                    <div v-if="currentIdeas.length === 0" class="text-center text-gray-500 py-6 border-2 border-dashed rounded">
-                        Kho ý tưởng trống. Hãy tiến hành Brainstorm để tạo thêm ý tưởng mới!
+                    <div v-if="currentIdeas.length === 0" class="text-center text-slate-500 py-12 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50">
+                        <div class="text-4xl mb-3">📭</div>
+                        <p class="font-medium">Kho ý tưởng trống. Hãy tiến hành Brainstorm để tạo thêm ý tưởng mới!</p>
                     </div>
 
-                    <div class="space-y-4">
+                    <div class="grid grid-cols-1 gap-5">
                         <div v-for="idea in currentIdeas" :key="idea.id"
-                             class="border rounded-lg shadow-sm p-4 relative bg-white transition-opacity"
+                             class="group border border-slate-200 rounded-xl p-5 bg-white hover:shadow-md transition-all relative overflow-hidden"
                              :class="{
-                                 'border-l-4 border-l-green-500': idea.status === 'pass',
-                                 'border-l-4 border-l-yellow-500': idea.status === 'warn',
-                                 'border-l-4 border-l-red-500 opacity-60': idea.status === 'drop'
+                                 'border-l-4 border-l-emerald-500': idea.status === 'pass',
+                                 'border-l-4 border-l-amber-500 bg-amber-50/30': idea.status === 'warn',
+                                 'border-l-4 border-l-red-500 opacity-50 grayscale hover:grayscale-0': idea.status === 'drop'
                              }">
 
-                            <!-- Nút Vứt bỏ ở góc -->
-                            <button @click="rejectIdea(idea)" title="Vứt bỏ ý tưởng này"
-                                    class="absolute top-3 right-3 text-gray-400 hover:text-red-600 transition-colors">
-                                🗑️ Vứt bỏ
+                            <div v-if="idea.status === 'pass'" class="absolute -right-6 -top-6 w-16 h-16 bg-emerald-100 rounded-full opacity-50 pointer-events-none group-hover:scale-150 transition-transform duration-500"></div>
+
+                            <button @click="rejectIdea(idea)" title="Vứt bỏ"
+                                    class="absolute top-4 right-4 text-slate-300 hover:text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors z-10">
+                                🗑️
                             </button>
 
-                            <div class="mb-2 pr-16 flex flex-col items-start gap-1">
-                                <span v-if="idea.rabbit_hole_series" class="bg-purple-600 text-white text-xs px-2 py-1 rounded font-bold shadow-sm">
-                                    🐰 Rabbit Hole: Phần {{ idea.part_number }}/3
-                                </span>
-                                <h4 class="font-bold text-lg leading-tight">{{ idea.title }}</h4>
+                            <div class="mb-3 pr-12">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <span v-if="idea.rabbit_hole_series" class="bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white text-[10px] uppercase tracking-wider px-2 py-0.5 rounded font-bold shadow-sm inline-block">
+                                        Rabbit Hole • Phần {{ idea.part_number }}/3
+                                    </span>
+                                    <span class="bg-blue-50 text-blue-600 text-[10px] uppercase tracking-wider px-2 py-0.5 rounded font-bold border border-blue-100">
+                                        Viral Strategy
+                                    </span>
+                                </div>
+                                <h4 class="font-extrabold text-xl text-slate-800 leading-tight mb-2">{{ idea.title }}</h4>
+                                <p class="text-sm text-slate-600 line-clamp-2">{{ idea.summary }}</p>
                             </div>
 
-                            <div class="flex flex-wrap gap-2 mb-3">
-                                <span v-for="topic in idea.topics" :key="topic" class="bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded border">
+                            <div class="flex flex-wrap gap-2 mb-4">
+                                <span v-for="topic in idea.topics" :key="topic" class="bg-slate-100 text-slate-600 text-xs px-2.5 py-1 rounded-md font-medium">
                                     #{{ topic }}
                                 </span>
                             </div>
 
-                            <div class="flex items-center justify-between border-t pt-3 mt-2">
+                            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between border-t border-slate-100 pt-4 mt-2 gap-4">
                                 <div class="flex items-center gap-3">
-                                    <span v-if="idea.status === 'pass'" class="bg-green-100 text-green-800 text-xs font-bold px-2 py-1 rounded">PASS</span>
-                                    <span v-if="idea.status === 'warn'" class="bg-yellow-100 text-yellow-800 text-xs font-bold px-2 py-1 rounded">WARN</span>
-                                    <span v-if="idea.status === 'drop'" class="bg-red-100 text-red-800 text-xs font-bold px-2 py-1 rounded">DROP</span>
-                                    <span class="text-sm text-gray-500 font-medium" title="Tỷ lệ trùng lặp với các video cũ">
-                                        Độ trùng lặp: {{ Math.round(idea.score * 100) }}%
-                                    </span>
+                                    <span v-if="idea.status === 'pass'" class="bg-emerald-100 text-emerald-800 text-xs font-bold px-2.5 py-1 rounded-md">✅ TƯƠI MỚI</span>
+                                    <span v-if="idea.status === 'warn'" class="bg-amber-100 text-amber-800 text-xs font-bold px-2.5 py-1 rounded-md">⚠️ HƠI TRÙNG</span>
+                                    <span v-if="idea.status === 'drop'" class="bg-red-100 text-red-800 text-xs font-bold px-2.5 py-1 rounded-md">❌ TRÙNG LẶP CAO</span>
+
+                                    <div class="h-1.5 w-16 bg-slate-200 rounded-full overflow-hidden" title="Độ trùng lặp">
+                                        <div class="h-full rounded-full"
+                                             :class="{'bg-emerald-500': idea.score < 0.6, 'bg-amber-500': idea.score >= 0.6 && idea.score <= 0.85, 'bg-red-500': idea.score > 0.85}"
+                                             :style="'width: ' + Math.round(idea.score * 100) + '%'"></div>
+                                    </div>
+                                    <span class="text-xs text-slate-500 font-mono font-medium">{{ Math.round(idea.score * 100) }}%</span>
                                 </div>
+
                                 <button @click="generateScript(idea.id)"
                                         :disabled="idea.status === 'drop'"
-                                        :class="{'opacity-50 cursor-not-allowed bg-gray-400 hover:bg-gray-400': idea.status === 'drop', 'bg-blue-600 hover:bg-blue-700': idea.status !== 'drop'}"
-                                        class="text-white px-4 py-2 rounded font-bold shadow transition-colors flex items-center gap-2">
-                                    📝 Tạo Kịch Bản
+                                        :class="{'opacity-50 cursor-not-allowed bg-slate-200 text-slate-400': idea.status === 'drop', 'bg-slate-900 text-white hover:bg-violet-600 hover:shadow-lg hover:-translate-y-0.5': idea.status !== 'drop'}"
+                                        class="w-full sm:w-auto px-6 py-2.5 rounded-lg font-bold transition-all flex items-center justify-center gap-2 shadow-sm">
+                                    <span>📝</span> Xây dựng Kịch Bản
                                 </button>
                             </div>
                         </div>
@@ -169,41 +271,81 @@
             </div>
 
             <!-- PHASE 2: SCRIPT BUILDER -->
-            <div v-if="currentScreen === 'phase2' && scriptData">
-                <div class="flex justify-between items-center mb-4">
-                    <div class="flex items-center gap-3">
-                        <button @click="goToPhase('phase1')" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded font-semibold text-sm">⬅️ Quay lại Kho Ý Tưởng</button>
-                        <h2 class="text-xl font-bold">📝 Phase 2: Script Builder</h2>
+            <div v-if="currentScreen === 'phase2' && scriptData" class="animate-fade-in">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                    <div>
+                        <button @click="goToPhase('phase1')" class="text-slate-500 hover:text-slate-800 font-semibold text-sm transition-colors mb-1 flex items-center gap-1">
+                            <span>←</span> Kho Ý Tưởng
+                        </button>
+                        <h2 class="text-3xl font-extrabold gradient-text flex items-center gap-3">
+                            📝 Phase 2: Script Builder
+                            <span class="deep-thinking-badge bg-violet-100 text-violet-700 border border-violet-200 text-xs px-2 py-1 rounded-lg font-bold tracking-wide uppercase shadow-sm">Deep Thinking V2</span>
+                        </h2>
                     </div>
-                    <div class="flex items-center gap-4">
-                        <span v-if="isScriptDirty" class="text-yellow-600 font-semibold text-sm">⚠️ Có thay đổi chưa lưu</span>
-                        <button @click="saveScript" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded">Lưu Kịch Bản</button>
-                        <button @click="generateVoiceover" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded font-bold">Tạo Voiceover ➡️</button>
+                    <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                        <span v-if="isScriptDirty" class="bg-amber-100 text-amber-800 px-3 py-1.5 rounded-lg font-semibold text-sm border border-amber-200 animate-pulse">⚠️ Chưa lưu</span>
+                        <button @click="regenerateScript" class="bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 px-4 py-2.5 rounded-lg font-bold shadow-sm transition-colors flex items-center gap-2">
+                            <span>🔄</span> Tạo lại Kịch bản
+                        </button>
+                        <button @click="saveScript" class="bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-2.5 rounded-lg font-bold shadow-sm transition-colors">
+                            💾 Lưu
+                        </button>
+                        <button @click="generateVoiceover" class="bg-slate-900 hover:bg-violet-600 text-white px-6 py-2.5 rounded-lg font-bold shadow-md transition-all flex items-center gap-2">
+                            Tạo Voiceover <span>→</span>
+                        </button>
                     </div>
                 </div>
 
-                <div class="bg-white p-4 rounded shadow mb-4 flex justify-between items-center">
-                    <p class="text-lg"><strong>Thời lượng ước tính:</strong> <span class="text-blue-600 font-bold">{{ scriptData.estimated_total_duration }}s</span></p>
+                <div class="bg-gradient-to-r from-blue-50 to-violet-50 p-4 rounded-xl border border-blue-100 mb-6 flex justify-between items-center shadow-sm">
+                    <div class="flex items-center gap-3">
+                        <div class="bg-white p-2 rounded-lg shadow-sm">⏱️</div>
+                        <div>
+                            <p class="text-sm text-slate-500 font-semibold">Thời lượng Video Dự Kiến</p>
+                            <p class="text-2xl font-black text-slate-800">{{ scriptData.estimated_total_duration }} <span class="text-sm font-bold text-slate-500">giây</span></p>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="space-y-8">
                     <!-- Group by Chapter -->
-                    <div v-for="(group, chapterNum) in groupedScenes" :key="chapterNum" class="border-2 border-gray-200 rounded-lg p-4 bg-gray-50">
-                        <h3 class="text-xl font-bold text-gray-800 mb-4 border-b border-gray-300 pb-2">Chapter {{ chapterNum }}</h3>
+                    <div v-for="(group, chapterNum) in groupedScenes" :key="chapterNum" class="relative">
+                        <!-- Chapter Timeline line -->
+                        <div class="absolute left-6 top-14 bottom-0 w-0.5 bg-slate-200 z-0"></div>
 
-                        <div class="space-y-4">
-                            <div v-for="scene in group" :key="scene.scene_number" class="bg-white p-4 rounded-lg shadow-sm border border-gray-300">
-                                <h4 class="font-bold text-gray-700 mb-3 flex justify-between">
-                                    <span>🎬 Scene {{ scene.scene_number }}</span>
-                                    <span class="text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded font-mono">⏱ {{ scene.duration_seconds }}s</span>
-                                </h4>
-                                <div class="mb-4">
-                                    <label class="block text-sm font-semibold text-gray-600 mb-1">Visual Concept (Gợi ý hình ảnh):</label>
-                                    <textarea v-model="scene.visual_concept" @input="markScriptDirty" class="w-full border border-gray-300 bg-gray-50 text-gray-700 italic p-2 rounded focus:ring-2 focus:ring-blue-400" rows="2"></textarea>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-semibold text-gray-600 mb-1">Narration Outline (Lời bình - Tự động tính thời lượng):</label>
-                                    <textarea :value="scene.narration_outline.join('\n')" @input="e => updateNarration(scene, e.target.value)" class="w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-blue-400" rows="4"></textarea>
+                        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden relative z-10">
+                            <div class="bg-slate-50 border-b border-slate-200 p-4 flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-full bg-violet-600 text-white flex items-center justify-center font-black shadow-md z-10">{{ chapterNum }}</div>
+                                <h3 class="text-xl font-extrabold text-slate-800">
+                                    <span v-if="chapterNum == 1">Hook & Intro</span>
+                                    <span v-else-if="chapterNum == Object.keys(groupedScenes).length">CTA & Outro</span>
+                                    <span v-else>Chapter {{ chapterNum }}</span>
+                                </h3>
+                            </div>
+
+                            <div class="p-6 space-y-5">
+                                <div v-for="scene in group" :key="scene.scene_number" class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm hover:border-violet-300 transition-colors relative group">
+                                    <div class="absolute -left-3 top-6 w-6 h-0.5 bg-slate-200"></div>
+                                    <h4 class="font-bold text-slate-800 mb-4 flex justify-between items-center">
+                                        <span class="flex items-center gap-2">
+                                            <span class="bg-slate-100 text-slate-500 text-xs px-2 py-1 rounded font-mono font-bold">SCENE {{ scene.scene_number }}</span>
+                                        </span>
+                                        <span class="text-xs bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-md font-mono font-bold border border-emerald-200">⏱ {{ scene.duration_seconds }}s</span>
+                                    </h4>
+
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2 flex items-center gap-1">
+                                                <span>👁️</span> Visual Concept (Hình ảnh)
+                                            </label>
+                                            <textarea v-model="scene.visual_concept" @input="markScriptDirty" class="w-full border border-slate-300 bg-slate-50 text-slate-700 italic p-3 rounded-lg focus:ring-2 focus:ring-violet-500 focus:bg-white transition-colors text-sm" rows="3"></textarea>
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2 flex items-center gap-1">
+                                                <span>🗣️</span> Narration Outline (Ý chính lời bình)
+                                            </label>
+                                            <textarea :value="scene.narration_outline.join('\n')" @input="e => updateNarration(scene, e.target.value)" class="w-full border border-slate-300 p-3 rounded-lg focus:ring-2 focus:ring-violet-500 transition-colors text-sm font-medium" rows="3"></textarea>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -212,191 +354,292 @@
             </div>
 
             <!-- PHASE 3: VOICE STUDIO -->
-            <div v-if="currentScreen === 'phase3' && voiceoverData">
-                <div class="flex justify-between items-center mb-4">
-                    <div class="flex items-center gap-3">
-                        <button @click="goToPhase('phase2')" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded font-semibold text-sm">⬅️ Quay lại Phase 2</button>
-                        <h2 class="text-xl font-bold">🎙️ Phase 3: Voice Studio</h2>
+            <div v-if="currentScreen === 'phase3' && voiceoverData" class="animate-fade-in">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                    <div>
+                        <button @click="goToPhase('phase2')" class="text-slate-500 hover:text-slate-800 font-semibold text-sm transition-colors mb-1 flex items-center gap-1">
+                            <span>←</span> Script Builder
+                        </button>
+                        <h2 class="text-3xl font-extrabold gradient-text flex items-center gap-3">
+                            🎙️ Phase 3: Voice Studio
+                            <span class="bg-violet-100 text-violet-700 border border-violet-200 text-xs px-2 py-1 rounded-lg font-bold tracking-wide uppercase shadow-sm">Critique Mode V2</span>
+                        </h2>
                     </div>
-                    <div class="flex items-center gap-4">
-                        <span v-if="isVoiceoverDirty" class="text-yellow-600 font-semibold text-sm">⚠️ Có thay đổi chưa lưu</span>
-                        <button @click="saveVoiceover" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded">Lưu Lời Thoại</button>
-                        <button @click="synthesizeVoice" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded font-bold shadow">🎧 Tạo Voiceover toàn bộ</button>
-                        <button v-if="voiceoverData.is_synthesized" @click="enterPhase4" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-bold shadow">Vào Phase 4 ➡️</button>
-                        <span v-else class="text-sm text-gray-500 italic bg-gray-100 border border-gray-200 px-3 py-2 rounded">🎧 Cần tạo Voiceover toàn bộ để vào Phase 4</span>
+                    <div class="flex flex-wrap items-center gap-3">
+                        <span v-if="isVoiceoverDirty" class="bg-amber-100 text-amber-800 px-3 py-1.5 rounded-lg font-semibold text-sm border border-amber-200 animate-pulse">⚠️ Chưa lưu</span>
+                        <button @click="generateVoiceover" class="bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 px-4 py-2.5 rounded-lg font-bold shadow-sm transition-colors flex items-center gap-2">
+                            <span>🔄</span> Tạo lại Lời Thoại
+                        </button>
+                        <button @click="saveVoiceover" class="bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-2.5 rounded-lg font-bold shadow-sm transition-colors">
+                            💾 Lưu
+                        </button>
+                        <button @click="synthesizeVoice" class="bg-violet-600 hover:bg-violet-700 text-white px-5 py-2.5 rounded-lg font-bold shadow-md transition-colors flex items-center gap-2">
+                            <span>🎧</span> Tổng hợp TTS Toàn bộ
+                        </button>
+                        <button v-if="voiceoverData.is_synthesized" @click="enterPhase4" class="bg-slate-900 hover:bg-blue-600 text-white px-6 py-2.5 rounded-lg font-bold shadow-md transition-all flex items-center gap-2">
+                            Vào Phase 4 <span>→</span>
+                        </button>
+                        <span v-else class="text-sm text-amber-600 font-semibold bg-amber-50 border border-amber-200 px-4 py-2.5 rounded-lg">
+                            ⚠️ Cần tổng hợp TTS để tiếp tục
+                        </span>
                     </div>
                 </div>
 
-                <div class="space-y-6">
-                    <div v-for="(scene, idx) in voiceoverData.voiceover_scenes" :key="idx" class="bg-white p-5 rounded-lg shadow-sm border-l-4 border-purple-500">
-                        <div class="flex justify-between items-center mb-3">
-                            <h4 class="font-bold text-gray-700">🎬 Scene {{ scene.scene_number }}</h4>
-                            <button @click="synthesizeSingleScene(scene)" class="bg-indigo-100 text-indigo-700 hover:bg-indigo-200 px-3 py-1 rounded text-sm font-semibold flex items-center gap-1">
-                                🎧 Sinh Âm Thanh (TTS)
-                            </button>
-                        </div>
-                        <div class="mb-3">
-                            <label class="block text-sm font-semibold text-gray-600 mb-1">Spoken Text (Lời thoại):</label>
-                            <textarea v-model="scene.spoken_text" @input="markVoiceoverDirty" class="w-full border border-gray-300 p-3 rounded focus:ring-2 focus:ring-purple-400" rows="3"></textarea>
-                        </div>
-                        <div class="bg-gray-50 p-3 rounded border border-gray-200" v-if="getAudioUrl(scene.scene_number)">
-                            <label class="block text-sm font-semibold text-gray-500 mb-2">Nghe thử Audio:</label>
-                            <audio controls class="w-full h-10" :src="getAudioUrl(scene.scene_number)"></audio>
-                        </div>
-                        <div v-else class="text-sm text-gray-400 italic">
-                            Chưa có âm thanh cho phân cảnh này.
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="p-6 space-y-6">
+                        <div v-for="(scene, idx) in voiceoverData.voiceover_scenes" :key="idx" class="bg-slate-50 p-5 rounded-xl border border-slate-200 relative group hover:border-violet-300 transition-colors">
+
+                            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
+                                <h4 class="font-extrabold text-slate-800 flex items-center gap-2">
+                                    <span class="bg-slate-200 text-slate-600 text-xs px-2 py-1 rounded font-mono">SCENE {{ scene.scene_number }}</span>
+                                </h4>
+                                <button @click="synthesizeSingleScene(scene)" class="bg-white border border-slate-300 text-slate-700 hover:bg-violet-50 hover:text-violet-700 hover:border-violet-200 px-4 py-1.5 rounded-lg text-sm font-bold transition-all shadow-sm flex items-center gap-2">
+                                    ▶️ Sinh Audio lẻ
+                                </button>
+                            </div>
+
+                            <div class="mb-4">
+                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Spoken Text (Kịch bản đọc)</label>
+                                <textarea v-model="scene.spoken_text" @input="markVoiceoverDirty" class="w-full border border-slate-300 bg-white p-4 rounded-lg text-slate-800 font-medium leading-relaxed focus:ring-2 focus:ring-violet-500 transition-colors shadow-inner" rows="3"></textarea>
+                            </div>
+
+                            <div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center gap-4" v-if="getAudioUrl(scene.scene_number)">
+                                <div class="w-10 h-10 rounded-full bg-violet-100 text-violet-600 flex items-center justify-center flex-shrink-0">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM14.657 2.929a1 1 0 011.414 0A9.972 9.972 0 0119 10a9.972 9.972 0 01-2.929 7.071 1 1 0 01-1.414-1.414A7.971 7.971 0 0017 10c0-2.21-.894-4.208-2.343-5.657a1 1 0 010-1.414zm-2.829 2.828a1 1 0 011.415 0A5.983 5.983 0 0115 10a5.984 5.984 0 01-1.757 4.243 1 1 0 01-1.415-1.415A3.984 3.984 0 0013 10a3.983 3.983 0 00-1.172-2.828 1 1 0 010-1.415z" clip-rule="evenodd" />
+                                    </svg>
+                                </div>
+                                <audio controls class="w-full h-10 custom-audio" :src="getAudioUrl(scene.scene_number)"></audio>
+                            </div>
+                            <div v-else class="flex items-center gap-2 text-sm text-slate-400 bg-slate-100 p-3 rounded-lg border border-slate-200 border-dashed">
+                                <span>🔇</span> Chưa có file âm thanh cho phân cảnh này.
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
             <!-- PHASE 4: ART GALLERY -->
-            <div v-if="currentScreen === 'phase4' && assetData">
-                <div class="flex justify-between items-center mb-6">
-                    <div class="flex items-center gap-3">
-                        <button @click="goToPhase('phase3')" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded font-semibold text-sm">⬅️ Quay lại Phase 3</button>
-                        <h2 class="text-2xl font-bold">🎨 Phase 4: Art Gallery</h2>
+            <div v-if="currentScreen === 'phase4' && assetData" class="animate-fade-in">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                    <div>
+                        <button @click="goToPhase('phase3')" class="text-slate-500 hover:text-slate-800 font-semibold text-sm transition-colors mb-1 flex items-center gap-1">
+                            <span>←</span> Voice Studio
+                        </button>
+                        <h2 class="text-3xl font-extrabold gradient-text flex items-center gap-3">
+                            🎨 Phase 4: Art Gallery
+                            <span class="bg-violet-100 text-violet-700 border border-violet-200 text-xs px-2 py-1 rounded-lg font-bold tracking-wide uppercase shadow-sm">AI Art Director V2</span>
+                        </h2>
                     </div>
-                    <div class="flex items-center gap-4">
-                        <span v-if="isAssetDirty" class="text-yellow-600 font-semibold text-sm">⚠️ Có thay đổi chưa lưu</span>
-                        <button @click="saveAssets" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded">Lưu Dữ Liệu</button>
-                        <button @click="continueGenerateAssets" class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded font-bold">🖌️ Vẽ Tiếp Ảnh Thiếu</button>
-                        <button @click="generateAssets" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded font-bold">🎨 Vẽ Lại Toàn Bộ</button>
-                        <button @click="renderVideo" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded font-bold shadow">Render Video ➡️</button>
+                    <div class="flex flex-wrap items-center gap-3">
+                        <span v-if="isAssetDirty" class="bg-amber-100 text-amber-800 px-3 py-1.5 rounded-lg font-semibold text-sm border border-amber-200 animate-pulse">⚠️ Chưa lưu</span>
+                        <button @click="saveAssets" class="bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-2.5 rounded-lg font-bold shadow-sm transition-colors">
+                            💾 Lưu
+                        </button>
+                        <button @click="continueGenerateAssets" class="bg-amber-500 hover:bg-amber-600 text-white px-5 py-2.5 rounded-lg font-bold shadow-sm transition-colors flex items-center gap-2">
+                            <span>🖌️</span> Vẽ Tiếp Ảnh Thiếu
+                        </button>
+                        <button @click="generateAssets" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-bold shadow-sm transition-colors flex items-center gap-2">
+                            <span>🎨</span> Tạo Lại Toàn Bộ Ảnh
+                        </button>
+                        <button @click="renderVideo" class="bg-slate-900 hover:bg-violet-600 text-white px-6 py-2.5 rounded-lg font-bold shadow-md transition-all flex items-center gap-2">
+                            Render Video <span>→</span>
+                        </button>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div v-for="(scene, idx) in assetData.assets" :key="idx" class="bg-white p-5 rounded-lg shadow-sm border border-gray-200 flex flex-col">
-                        <h4 class="font-bold text-gray-800 mb-3">🎬 Scene {{ scene.scene_number }}</h4>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div v-for="(scene, idx) in assetData.assets" :key="idx" class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col group hover:shadow-md transition-all">
 
-                        <div class="mb-4 flex-grow">
-                            <label class="block text-sm font-semibold text-gray-600 mb-1">Image Prompt:</label>
-                            <textarea v-model="scene.image_prompt" @input="markAssetDirty" class="w-full border border-gray-300 p-2 rounded text-sm focus:ring-2 focus:ring-blue-400" rows="3"></textarea>
-
-                            <button @click="regenerateImage(scene)" class="mt-2 w-full bg-blue-100 text-blue-700 hover:bg-blue-200 py-2 rounded text-sm font-bold border border-blue-200 flex justify-center items-center gap-2">
-                                🎨 Vẽ lại ảnh này
+                        <!-- Header Ảnh -->
+                        <div class="bg-slate-50 border-b border-slate-200 p-4 flex justify-between items-center">
+                            <h4 class="font-extrabold text-slate-800 flex items-center gap-2">
+                                <span class="bg-slate-200 text-slate-600 text-xs px-2 py-1 rounded font-mono">SCENE {{ scene.scene_number }}</span>
+                            </h4>
+                            <button @click="regenerateImage(scene)" title="Vẽ lại ảnh này" class="text-slate-400 hover:text-blue-600 bg-white border border-slate-200 hover:border-blue-300 p-1.5 rounded-lg transition-colors shadow-sm">
+                                🔄
                             </button>
                         </div>
 
-                        <div class="mb-3">
-                            <label class="block text-sm font-semibold text-gray-600 mb-1">Image Path (Local):</label>
-                            <input v-model="scene.image_path" @input="markAssetDirty" class="w-full border border-gray-300 bg-gray-50 p-1 rounded text-sm text-gray-500">
+                        <!-- Khung Hiển Thị Ảnh -->
+                        <div class="relative bg-slate-100 aspect-video flex items-center justify-center border-b border-slate-200 overflow-hidden">
+                            <template v-if="scene.image_path">
+                                <img :src="'/' + scene.image_path + '?v=' + imageCacheVersion" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" alt="Scene Image">
+                                <!-- Lớp overlay bóng đổ nhẹ -->
+                                <div class="absolute inset-0 ring-1 ring-inset ring-black/10"></div>
+                            </template>
+                            <template v-else>
+                                <div class="text-center">
+                                    <div class="text-4xl mb-2 opacity-30">🖼️</div>
+                                    <span class="text-slate-400 font-bold text-sm">Chưa có hình ảnh</span>
+                                </div>
+                            </template>
                         </div>
 
-                        <div v-if="scene.image_path" class="mt-auto border-2 border-dashed border-gray-300 rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center min-h-[200px]">
-                            <img :src="'/' + scene.image_path + '?v=' + imageCacheVersion" class="w-full h-auto object-cover max-h-64" alt="Scene Image">
-                        </div>
-                        <div v-else class="mt-auto border-2 border-dashed border-gray-300 rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center min-h-[200px] text-gray-400 text-sm font-semibold">
-                            Chưa có hình ảnh
+                        <!-- Panel Chỉnh sửa -->
+                        <div class="p-5 flex-grow flex flex-col gap-4">
+                            <div>
+                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Optimized Image Prompt</label>
+                                <textarea v-model="scene.image_prompt" @input="markAssetDirty" class="w-full border border-slate-300 bg-slate-50 text-slate-600 text-xs p-3 rounded-lg focus:ring-2 focus:ring-violet-500 transition-colors font-mono" rows="4"></textarea>
+                            </div>
+                            <div class="mt-auto">
+                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Local Path</label>
+                                <input v-model="scene.image_path" @input="markAssetDirty" class="w-full border border-slate-200 bg-slate-50 p-2 rounded-lg text-xs text-slate-400 font-mono focus:outline-none focus:ring-1 focus:ring-slate-300">
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
             <!-- PHASE 5: RENDER ROOM -->
-            <div v-if="currentScreen === 'phase5'">
-                <div class="flex justify-between items-center mb-6">
-                    <div class="flex items-center gap-3">
-                        <button @click="goToPhase('phase4')" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded font-semibold text-sm">⬅️ Quay lại Phase 4</button>
-                        <h2 class="text-2xl font-bold">🎬 Phase 5: Render Room</h2>
+            <div v-if="currentScreen === 'phase5'" class="animate-fade-in">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                    <div>
+                        <button @click="goToPhase('phase4')" class="text-slate-500 hover:text-slate-800 font-semibold text-sm transition-colors mb-1 flex items-center gap-1">
+                            <span>←</span> Art Gallery
+                        </button>
+                        <h2 class="text-3xl font-extrabold gradient-text flex items-center gap-3">
+                            🎬 Phase 5: Render Room
+                        </h2>
                     </div>
-                    <button @click="generateSEO" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-bold shadow">Tối Ưu SEO ➡️</button>
-                </div>
-
-                <div v-if="renderStatus === 'idle'" class="bg-white p-10 rounded-lg shadow text-center border border-gray-200">
-                    <p class="text-gray-600 mb-6 text-lg">Hệ thống đã thu thập đủ tài nguyên. Bạn đã sẵn sàng ghép video?</p>
-                    <button @click="startRenderStream" class="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-lg font-bold text-lg shadow-lg flex items-center justify-center mx-auto gap-2">
-                        🎬 Bắt Đầu Ghép Video
+                    <button @click="generateSEO" class="bg-slate-900 hover:bg-violet-600 text-white px-6 py-2.5 rounded-lg font-bold shadow-md transition-all flex items-center gap-2">
+                        Tối Ưu SEO <span>→</span>
                     </button>
                 </div>
 
-                <div v-if="renderStatus === 'rendering'" class="bg-gray-900 text-green-400 p-4 rounded-lg shadow font-mono text-sm h-96 overflow-y-auto" id="renderConsole">
-                    <div v-for="(line, idx) in renderLogs" :key="idx" class="whitespace-pre-wrap">{{ line }}</div>
+                <div v-if="renderStatus === 'idle'" class="bg-white p-12 rounded-2xl shadow-sm border border-slate-200 text-center relative overflow-hidden">
+                    <div class="absolute -right-20 -top-20 w-64 h-64 bg-violet-100 rounded-full blur-3xl opacity-50"></div>
+                    <div class="absolute -left-20 -bottom-20 w-64 h-64 bg-blue-100 rounded-full blur-3xl opacity-50"></div>
+
+                    <div class="relative z-10">
+                        <div class="text-6xl mb-6">🍿</div>
+                        <h3 class="text-2xl font-black text-slate-800 mb-2">Sẵn sàng Ghép Video!</h3>
+                        <p class="text-slate-500 mb-8 max-w-md mx-auto">Hệ thống đã thu thập đầy đủ ảnh, âm thanh và thời lượng. Bấm nút bên dưới để khởi động FFmpeg Render Engine.</p>
+                        <button @click="startRenderStream" class="bg-gradient-to-r from-blue-600 to-violet-600 text-white px-10 py-4 rounded-xl font-black text-xl shadow-xl shadow-blue-500/30 transform transition hover:-translate-y-1 hover:shadow-blue-500/50 flex items-center justify-center mx-auto gap-3">
+                            ▶️ BẮT ĐẦU RENDER
+                        </button>
+                    </div>
+                </div>
+
+                <div v-if="renderStatus === 'rendering'" class="bg-slate-900 rounded-2xl shadow-2xl overflow-hidden border border-slate-800">
+                    <div class="bg-slate-800 px-4 py-2 flex items-center gap-2 border-b border-slate-700">
+                        <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                        <div class="w-3 h-3 rounded-full bg-amber-500"></div>
+                        <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                        <span class="text-slate-400 text-xs font-mono ml-2">ffmpeg_render_engine.sh</span>
+                    </div>
+                    <div class="p-5 font-mono text-sm h-96 overflow-y-auto text-emerald-400 leading-relaxed" id="renderConsole">
+                        <div v-for="(line, idx) in renderLogs" :key="idx" class="whitespace-pre-wrap">{{ line }}</div>
+                        <div class="animate-pulse mt-2 block w-2 h-4 bg-emerald-400"></div>
+                    </div>
                 </div>
 
                 <div v-if="renderStatus === 'done'" class="space-y-6">
-                    <div class="bg-green-50 border border-green-200 text-green-800 p-4 rounded-lg shadow-sm text-center">
-                        <p class="font-bold text-lg mb-2">✅ Video đã được render thành công!</p>
-                        <p class="font-mono text-sm text-green-600 mb-4">{{ renderPath }}</p>
-                        <button @click="startRenderStream" class="text-sm bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 px-4 py-1 rounded">🔄 Render Lại</button>
+                    <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 p-6 rounded-2xl shadow-sm text-center relative overflow-hidden">
+                        <div class="absolute inset-0 bg-emerald-400 opacity-10 animate-pulse"></div>
+                        <h3 class="font-black text-2xl mb-2 relative z-10">🎉 THÀNH CÔNG!</h3>
+                        <p class="text-emerald-700 font-medium mb-4 relative z-10">Video của bạn đã được xuất xưởng hoàn hảo.</p>
+                        <div class="inline-block bg-white px-4 py-2 rounded-lg font-mono text-sm text-emerald-600 border border-emerald-200 shadow-sm relative z-10 mb-4">
+                            📁 {{ renderPath }}
+                        </div>
+                        <br>
+                        <button @click="startRenderStream" class="text-sm bg-white border border-slate-300 text-slate-600 hover:bg-slate-50 px-4 py-2 rounded-lg font-bold shadow-sm relative z-10 transition-colors">
+                            🔄 Render Lại
+                        </button>
                     </div>
 
-                    <div v-if="renderPath" class="bg-white p-4 rounded-lg shadow border border-gray-200 flex justify-center">
-                        <video controls class="w-full max-w-4xl rounded shadow-lg bg-black" :src="'/' + renderPath + '?v=' + videoCacheVersion"></video>
+                    <div v-if="renderPath" class="bg-slate-900 p-4 rounded-2xl shadow-2xl border border-slate-800 flex justify-center">
+                        <video controls class="w-full max-w-5xl rounded-xl shadow-inner bg-black aspect-video" :src="'/' + renderPath + '?v=' + videoCacheVersion"></video>
                     </div>
                 </div>
             </div>
 
             <!-- PHASE 6: SEO & PUBLISH -->
-            <div v-if="currentScreen === 'phase6' && seoData">
-                <div class="flex justify-between items-center mb-6">
-                    <div class="flex items-center gap-3">
-                        <button @click="goToPhase('phase5')" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded font-semibold text-sm">⬅️ Quay lại Phase 5</button>
-                        <h2 class="text-2xl font-bold">🚀 Phase 6: SEO & Publish</h2>
+            <div v-if="currentScreen === 'phase6' && seoData" class="animate-fade-in">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                    <div>
+                        <button @click="goToPhase('phase5')" class="text-slate-500 hover:text-slate-800 font-semibold text-sm transition-colors mb-1 flex items-center gap-1">
+                            <span>←</span> Render Room
+                        </button>
+                        <h2 class="text-3xl font-extrabold gradient-text flex items-center gap-3">
+                            🚀 Phase 6: SEO & Publish
+                        </h2>
                     </div>
-                    <div class="flex gap-4">
-                        <button @click="generateSEO" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded font-bold shadow">🔄 Tạo lại Metadata & Thumbnail</button>
-                        <button @click="goDashboard" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded shadow">Hoàn Thành & Về Dashboard</button>
+                    <div class="flex flex-wrap gap-3">
+                        <button @click="generateSEO" class="bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 px-5 py-2.5 rounded-lg font-bold shadow-sm transition-colors flex items-center gap-2">
+                            <span>🔄</span> Tối Ưu Lại Metadata
+                        </button>
+                        <button @click="goDashboard" class="bg-slate-900 hover:bg-violet-600 text-white px-6 py-2.5 rounded-lg font-bold shadow-md transition-all flex items-center gap-2">
+                            Hoàn Thành & Đóng <span>🏁</span>
+                        </button>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <!-- Cột Trái: Thumbnail -->
-                    <div class="bg-white p-6 rounded-lg shadow border border-gray-200 flex flex-col">
-                        <h3 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">🖼️ Gợi ý Ảnh bìa (Thumbnail)</h3>
-                        <div v-if="seoData.thumbnail_paths && seoData.thumbnail_paths.length" class="mb-4">
-                            <p class="font-bold text-gray-700 mb-2">Ảnh bìa AI vẽ tự động ({{seoData.thumbnail_paths.length}} lựa chọn):</p>
-                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                <div v-for="(path, idx) in seoData.thumbnail_paths" :key="idx" class="rounded-lg overflow-hidden border-2 border-gray-200">
-                                    <p class="bg-gray-100 text-center py-1 text-sm font-semibold text-gray-700">Option {{idx + 1}}</p>
-                                    <img :src="'/' + path + '?v=' + thumbnailCacheVersion" class="w-full h-auto object-cover" alt="Youtube Thumbnail">
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                    <!-- Cột Trái: Thumbnail (Rộng hơn chút) -->
+                    <div class="lg:col-span-7 bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col">
+                        <h3 class="text-xl font-extrabold text-slate-800 mb-6 flex items-center gap-2 border-b border-slate-100 pb-4">
+                            <span>🖼️</span> Assets Ảnh Bìa (Thumbnail)
+                        </h3>
+
+                        <div v-if="seoData.thumbnail_paths && seoData.thumbnail_paths.length" class="mb-8">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                <div v-for="(path, idx) in seoData.thumbnail_paths" :key="idx" class="rounded-xl overflow-hidden border border-slate-200 group relative">
+                                    <div class="absolute top-2 left-2 bg-black/60 text-white text-xs font-bold px-2 py-1 rounded backdrop-blur-sm z-10">Opt {{idx + 1}}</div>
+                                    <img :src="'/' + path + '?v=' + thumbnailCacheVersion" class="w-full h-auto object-cover aspect-video group-hover:scale-105 transition-transform duration-500" alt="Youtube Thumbnail">
                                 </div>
                             </div>
                         </div>
-                        <div v-else class="mb-4 flex items-center justify-center bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg h-64 text-gray-400 font-semibold">
-                            Chưa có ảnh bìa
+                        <div v-else class="mb-8 flex flex-col items-center justify-center bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl h-48 text-slate-400">
+                            <span class="text-3xl mb-2">📸</span>
+                            <span class="font-bold text-sm">Chưa có ảnh bìa</span>
                         </div>
 
-                        <div>
-                            <label class="block font-bold text-sm text-gray-700 mb-2">Ý tưởng hình ảnh (Thumbnail Concept):</label>
-                            <div class="bg-blue-50 text-blue-800 p-4 rounded text-sm border border-blue-100 mb-3">
-                                {{ seoData.thumbnail_concept || 'Không có gợi ý.' }}
+                        <div class="space-y-6 mt-auto">
+                            <div class="bg-slate-50 p-5 rounded-xl border border-slate-100">
+                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">💡 Thumbnail Concept (Gợi ý Thiết kế)</label>
+                                <p class="text-slate-700 font-medium text-sm leading-relaxed">
+                                    {{ seoData.thumbnail_concept || 'Không có gợi ý.' }}
+                                </p>
                             </div>
 
-                            <label class="block font-bold text-sm text-gray-700 mb-2">Chữ chèn lên ảnh (Catchy Text):</label>
-                            <div class="bg-indigo-50 text-indigo-800 p-4 rounded text-sm italic font-bold border border-indigo-100">
-                                "{{ seoData.thumbnail_text || 'Không có gợi ý.' }}"
+                            <div class="bg-gradient-to-r from-indigo-50 to-blue-50 p-5 rounded-xl border border-indigo-100">
+                                <label class="block text-xs font-bold uppercase tracking-wider text-indigo-500 mb-2">🔠 Catchy Text (Chữ chèn lên ảnh)</label>
+                                <p class="text-indigo-900 font-black text-xl italic text-center drop-shadow-sm">
+                                    "{{ seoData.thumbnail_text || 'Không có gợi ý.' }}"
+                                </p>
                             </div>
                         </div>
                     </div>
 
                     <!-- Cột Phải: Metadata Form -->
-                    <div class="bg-white p-6 rounded-lg shadow border border-gray-200 flex flex-col space-y-4">
-                        <h3 class="text-lg font-bold text-gray-800 mb-2 border-b pb-2">📝 Metadata YouTube</h3>
+                    <div class="lg:col-span-5 bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col space-y-5">
+                        <h3 class="text-xl font-extrabold text-slate-800 mb-2 flex items-center gap-2 border-b border-slate-100 pb-4">
+                            <span>📝</span> YouTube Metadata
+                        </h3>
 
                         <div>
-                            <label class="block font-bold text-sm text-gray-700 mb-1">Gợi ý 3 Tiêu đề (Titles):</label>
-                            <textarea v-model="seoData.title" class="w-full border border-gray-300 p-2 h-24 rounded font-semibold text-lg focus:ring-2 focus:ring-blue-400"></textarea>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Tiêu đề (Chọn 1 trong 3)</label>
+                            <textarea v-model="seoData.title" class="w-full border border-slate-300 bg-white p-3 h-28 rounded-xl font-bold text-slate-800 focus:ring-2 focus:ring-blue-500 transition-colors shadow-sm" placeholder="Nhập tiêu đề..."></textarea>
                         </div>
 
                         <div>
-                            <label class="block font-bold text-sm text-gray-700 mb-1">Mô tả (Description):</label>
-                            <textarea v-model="seoData.description" class="w-full border border-gray-300 p-2 h-32 rounded focus:ring-2 focus:ring-blue-400"></textarea>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Mô tả (Description)</label>
+                            <textarea v-model="seoData.description" class="w-full border border-slate-300 bg-white p-3 h-40 rounded-xl text-sm text-slate-700 focus:ring-2 focus:ring-blue-500 transition-colors shadow-sm leading-relaxed" placeholder="Nhập mô tả..."></textarea>
                         </div>
 
                         <div>
-                            <label class="block font-bold text-sm text-gray-700 mb-1">Chỉ mục thời gian (Timestamps):</label>
-                            <textarea v-model="seoData.timestamps_text" class="w-full border border-gray-300 p-2 h-24 rounded font-mono text-sm bg-gray-50 focus:ring-2 focus:ring-blue-400"></textarea>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Chỉ mục thời gian (Timestamps)</label>
+                            <textarea v-model="seoData.timestamps_text" class="w-full border border-slate-200 bg-slate-50 p-3 h-28 rounded-xl font-mono text-xs text-slate-600 focus:ring-2 focus:ring-blue-500 transition-colors" placeholder="00:00 Intro..."></textarea>
                         </div>
 
                         <div>
-                            <label class="block font-bold text-sm text-gray-700 mb-1">Từ khóa (Tags):</label>
-                            <input v-model="seoData.tags" class="w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-blue-400">
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Từ khóa (Tags - phân cách bằng dấu phẩy)</label>
+                            <input v-model="seoData.tags" class="w-full border border-slate-300 bg-white p-3 rounded-xl text-sm text-slate-700 focus:ring-2 focus:ring-blue-500 transition-colors shadow-sm">
                         </div>
 
-                        <button @click="copyAllMetadata" class="mt-auto w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 shadow-md flex items-center justify-center gap-2">
-                            📋 Copy Tất Cả Dữ Liệu
+                        <button @click="copyAllMetadata" class="mt-4 w-full bg-blue-600 text-white py-4 rounded-xl font-black text-lg hover:bg-blue-700 shadow-lg shadow-blue-500/30 transform transition hover:-translate-y-0.5 flex items-center justify-center gap-2">
+                            <span>📋</span> COPY TOÀN BỘ METADATA
                         </button>
                     </div>
                 </div>
@@ -411,6 +654,15 @@
         createApp({
             data() {
                 return {
+                    
+                    toasts: [],
+                    toastIdCounter: 0,
+                    confirmModal: {
+                        isOpen: false,
+                        title: '',
+                        message: '',
+                        resolve: null
+                    },
                     autoTransition: false,
                     currentScreen: 'dashboard',
                     projects: [],
@@ -452,6 +704,31 @@
                 this.loadDashboard();
             },
             methods: {
+                
+                addToast(message, type = 'info', duration = 4000) {
+                    const id = this.toastIdCounter++;
+                    this.toasts.push({ id, message, type });
+                    setTimeout(() => {
+                        this.removeToast(id);
+                    }, duration);
+                },
+                removeToast(id) {
+                    this.toasts = this.toasts.filter(t => t.id !== id);
+                },
+                async customConfirm(title, message) {
+                    return new Promise((resolve) => {
+                        this.confirmModal.title = title;
+                        this.confirmModal.message = message;
+                        this.confirmModal.resolve = resolve;
+                        this.confirmModal.isOpen = true;
+                    });
+                },
+                handleConfirm(result) {
+                    this.confirmModal.isOpen = false;
+                    if (this.confirmModal.resolve) {
+                        this.confirmModal.resolve(result);
+                    }
+                },
                 markScriptDirty() {
                     this.isScriptDirty = true;
                 },
@@ -508,7 +785,7 @@
                         if (!res.ok) throw new Error(data.detail || 'API Error');
                         return data;
                     } catch (e) {
-                        if (!suppressAlert) alert("Lỗi: " + e.message);
+                        if (!suppressAlert) this.addToast(e.message || e, 'error');
                         throw e;
                     }
                 },
@@ -537,23 +814,23 @@
                     });
                 },
                 async deleteScriptMedia(scriptId) {
-                    if (!confirm('Bạn có chắc muốn xóa file media của video này? Kịch bản và dữ liệu chống trùng lặp vẫn sẽ được giữ lại.')) return;
+                    if (!(await this.customConfirm('Xác nhận xóa', 'Bạn có chắc muốn xóa file media của video này? Kịch bản và dữ liệu chống trùng lặp vẫn sẽ được giữ lại.'))) return;
                     this.withLoading('Đang xóa media video...', async () => {
                         await this.apiCall("/api/scripts/" + scriptId + "/media", 'DELETE');
-                        alert('Đã xóa media video thành công!');
+                        this.addToast('Đã xóa media video thành công!', 'success');
                         this.loadDashboard();
                     });
                 },
                 async deleteMedia(p) {
-                    if (!confirm('Bạn có chắc muốn xóa TOÀN BỘ FILE MEDIA (hình ảnh, âm thanh, video) của dự án này để giải phóng dung lượng ổ cứng? Dữ liệu chữ (kịch bản, tiêu đề) vẫn sẽ được giữ lại trong Database để chống trùng lặp.')) return;
+                    if (!(await this.customConfirm('Dọn dẹp dự án', 'Bạn có chắc muốn xóa TOÀN BỘ FILE MEDIA (hình ảnh, âm thanh, video) của dự án này để giải phóng dung lượng ổ cứng? Dữ liệu chữ (kịch bản, tiêu đề) vẫn sẽ được giữ lại trong Database để chống trùng lặp.'))) return;
                     this.withLoading('Đang xóa file media...', async () => {
                         await this.apiCall("/api/projects/" + p.id + "/media", 'DELETE');
-                        alert('Đã xóa sạch file media thành công! Dữ liệu dự án vẫn còn để hệ thống học hỏi.');
+                        this.addToast('Đã xóa sạch file media thành công!', 'success');
                         this.loadDashboard();
                     });
                 },
                 async rejectIdea(idea) {
-                    if (!confirm('Bạn có chắc muốn vứt bỏ ý tưởng này? Nó sẽ không bao giờ xuất hiện lại.')) return;
+                    if (!(await this.customConfirm('Vứt bỏ ý tưởng', 'Bạn có chắc muốn vứt bỏ ý tưởng này? Nó sẽ không bao giờ xuất hiện lại.'))) return;
                     this.withLoading('Đang xóa...', async () => {
                         await this.apiCall("/api/ideas/" + idea.id + "/reject", 'PUT');
                         this.currentIdeas = this.currentIdeas.filter(i => i.id !== idea.id);
@@ -627,11 +904,19 @@
                         this.currentScreen = 'phase2';
                     });
                 },
+                async regenerateScript() {
+                    if (!(await this.customConfirm('Cảnh báo Ghi đè', 'Bạn có chắc muốn tạo lại kịch bản? Mọi chỉnh sửa thủ công hiện tại sẽ bị ghi đè hoàn toàn.'))) return;
+                    if (this.scriptData && this.scriptData.idea_id) {
+                        await this.generateScript(this.scriptData.idea_id);
+                    } else {
+                        this.addToast('Không tìm thấy dữ liệu ý tưởng để tạo lại.', 'error');
+                    }
+                },
                 async saveScript() {
                     this.withLoading('Đang lưu kịch bản...', async () => {
                         await this.apiCall("/api/scripts/" + this.currentProject.current_script_id, 'PUT', { content: this.scriptData });
                         this.isScriptDirty = false;
-                        alert('Lưu kịch bản thành công!');
+                        // Không cần alert nếu auto
                     });
                 },
                 async generateVoiceover() {
@@ -657,11 +942,10 @@
                     this.withLoading('Đang lưu lời thoại...', async () => {
                         await this.apiCall("/api/voiceovers/" + this.currentProject.current_script_id, 'PUT', { content: this.voiceoverData });
                         this.isVoiceoverDirty = false;
-                        alert('Lưu lời thoại thành công!');
                     });
                 },
                 async synthesizeVoice() {
-                    this.withLoading('Đang tổng hợp toàn bộ Voiceover...', async () => {
+                    this.withLoading('Đang tổng hợp toàn bộ Voiceover (TTS)...', async () => {
                         await this.apiCall("/api/phase3_5/synthesize/" + this.currentProject.current_script_id, 'POST');
                         this.audioCacheVersion++;
                         if (this.voiceoverData) {
@@ -670,11 +954,11 @@
                         if (this.autoTransition) {
                             setTimeout(() => this.enterPhase4(), 500);
                         } else {
-                            alert('Đã tổng hợp toàn bộ âm thanh thành công!');
+                            // Cập nhật lại UI sau khi sinh TTS xong
+                            try {
+                                this.assetData = await this.apiCall("/api/assets/" + this.currentProject.current_script_id, 'GET', null, true);
+                            } catch(e) {}
                         }
-                        try {
-                            this.assetData = await this.apiCall("/api/assets/" + this.currentProject.current_script_id, 'GET', null, true);
-                        } catch(e) {}
                     });
                 },
                 async enterPhase4() {
@@ -692,7 +976,8 @@
                     });
                 },
                 async generateAssets() {
-                    this.withLoading('Đang vẽ hình ảnh...', async () => {
+                    if (!(await this.customConfirm('Vẽ lại toàn bộ ảnh', 'Hệ thống sẽ dùng AI phân tích phong cách nghệ thuật và vẽ lại TOÀN BỘ ẢNH. Bạn có chắc không?'))) return;
+                    this.withLoading('Đang xây dựng Giám đốc Nghệ thuật & vẽ ảnh...', async () => {
                         await this.apiCall("/api/phase4/generate/" + this.currentProject.current_script_id, 'POST');
                         await this.loadAssets(this.currentProject.current_script_id);
                     });
@@ -700,10 +985,10 @@
                 async continueGenerateAssets() {
                     const missingScenes = this.assetData.assets.filter(s => !s.image_path);
                     if (missingScenes.length === 0) {
-                        alert("Đã đủ ảnh cho tất cả các cảnh, không có gì để vẽ tiếp!");
+                        this.addToast('Đã đủ ảnh cho tất cả các cảnh, không có gì để vẽ tiếp!', 'info');
                         return;
                     }
-                    this.withLoading('Đang vẽ tiếp ảnh còn thiếu...', async () => {
+                    this.withLoading(`Đang vẽ tiếp ${missingScenes.length} ảnh còn thiếu...`, async () => {
                         let successCount = 0;
                         for (const scene of missingScenes) {
                             try {
@@ -718,10 +1003,10 @@
                             }
                         }
                         if (successCount > 0) {
-                            await this.saveAssets(); // Lưu dữ liệu sau khi vẽ thành công
+                            await this.saveAssets();
                         }
                         if (successCount < missingScenes.length) {
-                            alert(`Chỉ vẽ thành công ${successCount}/${missingScenes.length} ảnh. Vui lòng thử lại sau.`);
+                            this.addToast(`Chỉ vẽ thành công ${successCount}/${missingScenes.length} ảnh. Vui lòng thử lại sau.`, 'warning');
                         }
                     });
                 },
@@ -745,7 +1030,6 @@
                     this.withLoading('Đang lưu hình ảnh...', async () => {
                         await this.apiCall("/api/assets/" + this.currentProject.current_script_id, 'PUT', { content: this.assetData });
                         this.isAssetDirty = false;
-                        alert('Lưu hình ảnh thành công!');
                     });
                 },
                 async renderVideo() {
@@ -773,7 +1057,7 @@
                 },
                 async startRenderStream() {
                     this.renderStatus = 'rendering';
-                    this.renderLogs = ['[Hệ thống] Đang kết nối tới Render Engine...'];
+                    this.renderLogs = ['[Hệ thống] Đang kết nối tới FFmpeg Render Engine...'];
                     this.renderPath = '';
 
                     try {
@@ -826,7 +1110,7 @@
                     }
                 },
                 async generateSEO() {
-                    this.withLoading('Đang tạo Metadata SEO & Vẽ Thumbnail (Vui lòng chờ)...', async () => {
+                    this.withLoading('Đang tạo Metadata SEO & Vẽ Thumbnail...', async () => {
                         const res = await this.apiCall("/api/phase6/generate/" + this.currentProject.current_script_id, 'POST');
                         if (res && res.status === 'success') {
                             this.seoData = res.seo;
@@ -849,9 +1133,9 @@ TAGS:
 ${this.seoData.tags || ''}`;
                     try {
                         await navigator.clipboard.writeText(textToCopy);
-                        alert('Đã copy toàn bộ Metadata vào Clipboard thành công! Bạn có thể dán vào YouTube.');
+                        this.addToast('Đã copy toàn bộ Metadata vào Clipboard!', 'success');
                     } catch (err) {
-                        alert('Lỗi copy: ' + err);
+                        this.addToast('Lỗi copy: ' + err, 'error');
                     }
                 },
                 async loadSEO(scriptId) {
@@ -859,11 +1143,6 @@ ${this.seoData.tags || ''}`;
                         this.seoData = await this.apiCall("/api/seo/" + scriptId);
                         this.currentScreen = 'phase6';
                     });
-                },
-                copySEO() {
-                    const text = "TITLE:\n" + this.seoData.title + "\n\nDESC:\n" + this.seoData.description + "\n\nTAGS:\n" + (Array.isArray(this.seoData.tags) ? this.seoData.tags.join(', ') : this.seoData.tags);
-                    navigator.clipboard.writeText(text);
-                    alert('Đã copy!');
                 },
                 async goToPhase(phase) {
                     if (!this.currentProject || !this.currentProject.current_script_id) {
