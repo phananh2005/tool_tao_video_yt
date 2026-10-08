@@ -80,8 +80,12 @@ def test_idea_engine_rabbit_hole_max_3():
 def test_script_generator_full_script():
     adapter = Mock()
     engine = ScriptGeneratorEngine(adapter=adapter)
+    engine.develop_strategy = Mock(return_value="Chiến lược test")
     engine.generate_outline = Mock(return_value=[
         ChapterJSON(chapter_number=1, title="Ch1", summary="Summary1"),
+    ])
+    engine.refine_outline = Mock(return_value=[
+        ChapterJSON(chapter_number=1, title="Ch1 Ref", summary="Summary1 Ref"),
     ])
     scene = SceneJSON(chapter_number=1, scene_number=0, visual_concept="Cat", duration_seconds=10, narration_outline=["Hi"])
     engine.generate_chapter_scenes = Mock(return_value=[scene])
@@ -112,7 +116,7 @@ def test_voiceover_engine_full():
     assert len(vo.voiceover_scenes) == 1
     assert vo.voiceover_scenes[0].spoken_text == "Hello world"
     # Ensure our new TTS rules are present in the prompt
-    assert "QUAN TRỌNG VỀ PHÁT ÂM (TTS): TUYỆT ĐỐI KHÔNG dùng ký tự đặc biệt" in adapter.last_prompt
+    assert "Kiểm tra TTS: Tuyệt đối KHÔNG CÒN MỘT CON SỐ HAY KÝ HIỆU NÀO DẠNG TOÁN HỌC" in adapter.last_prompt
 
 
 # ==================== SceneIllustratorEngine ====================
