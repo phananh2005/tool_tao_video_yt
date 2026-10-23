@@ -27,13 +27,15 @@ Dùng Grep/Glob tìm trong `core/`, `modules/`, `tests/`:
 1. Phủ mọi nguồn trước, rồi đào vào ứng viên.
 2. Ghi lại cách tra để reviewer đối chiếu.
 
-### Bước 3 — Phân loại
+### Bước 3 — Phân loại & Khai thác code mẫu (Pattern Harvesting)
 
 | Nhóm | Nghĩa | Ghi kèm |
 |---|---|---|
 | **DÙNG LẠI** | Đã có thứ đáp ứng đúng | `path#symbol` + cách gọi |
 | **MỞ RỘNG** | Có thứ gần đúng — bổ sung thay vì viết bản song song | Vị trí + thay đổi dự kiến |
 | **VIẾT MỚI** | Thật sự chưa có | Lý do + nguồn đã quét + từ khoá đã dùng |
+
+**Bắt buộc khai thác code mẫu (Pattern Harvesting):** Khi phân loại là **VIẾT MỚI**, agent BẮT BUỘC phải chọn ra **1 file/hàm có sẵn tương đồng nhất** trong repo để đọc và trích xuất làm mẫu few-shot (ví dụ: cách dùng `_extract_json_array()`, cách log tiếng Việt bằng UTF-8 handler, cách bọc fixture SQLite tạm trong pytest). Ghi đường dẫn file mẫu này vào Reuse Report.
 
 > **Không thấy ≠ không tồn tại.** Nghi có tương đương nhưng nằm trong vùng mù → **DỪNG, hỏi người dùng**.
 

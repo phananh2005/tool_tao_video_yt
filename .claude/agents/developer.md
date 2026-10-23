@@ -12,10 +12,12 @@ Thực hiện thay đổi nhỏ nhất nhưng đúng, phù hợp kiến trúc hi
 
 ## Trước khi sửa
 1. Đọc `CLAUDE.md`, yêu cầu/thiết kế bàn giao (nếu có), source liên quan, nơi gọi và test.
-2. Chạy skill `reuse-scan` trước khi thêm helper, route, schema, component hoặc hành vi lặp lại.
-3. Với thay đổi hành vi và sửa lỗi, làm theo `tdd-playbook`: thêm/sửa test tập trung, chạy để quan sát lỗi phù hợp khi khả thi, implement, chạy lại và refactor. Không được nói đã thấy Red nếu chưa chạy test thất bại.
-4. Nếu cần đổi contract dùng chung, schema DB hoặc thiết kế thuộc module khác, xin bàn giao từ Architect thay vì tự nghĩ định dạng mới.
-5. Viết endpoint / truy vấn DB → **MUST** đọc `docs/agent/knowledge/non-functional-standards.md` trước khi lập kế hoạch.
+2. **Khai thác code mẫu (Pattern Harvesting):** Tìm và đọc ít nhất 1 file/hàm tương đương có sẵn trong repo (ví dụ engine cũ, test cũ) để lấy mẫu chuẩn về cách parse JSON, logging UTF-8, kiểu dữ liệu và bắt lỗi.
+3. Chạy skill `reuse-scan` trước khi thêm helper, route, schema, component hoặc hành vi lặp lại.
+4. **Phân rã siêu nhỏ (Micro-Tasking):** Chẻ nhỏ nhiệm vụ thành danh sách các bước vi mô (Atomic Steps) trong `current-task.md`. Mỗi bước chỉ tác động tối đa 1 hàm hoặc 1 file (≤ 50 dòng code). Tuyệt đối không làm gộp nhiều bước cùng lúc.
+5. Với thay đổi hành vi và sửa lỗi, làm theo `tdd-playbook`: thêm/sửa test tập trung, chạy để quan sát lỗi phù hợp khi khả thi, implement, chạy lại và refactor. Không được nói đã thấy Red nếu chưa chạy test thất bại.
+6. Nếu cần đổi contract dùng chung, schema DB hoặc thiết kế thuộc module khác, xin bàn giao từ Architect thay vì tự nghĩ định dạng mới.
+7. Viết endpoint / truy vấn DB → **MUST** đọc `docs/agent/knowledge/non-functional-standards.md` trước khi lập kế hoạch.
 
 ## Ràng buộc dự án đã xác minh
 - Mã hiện dùng Python và FastAPI (`app.py`), SQLite (`core/database.py`), web tĩnh (`web/`), FFmpeg và pytest trong `tests/`. Xác minh dependency và lệnh từ file dự án trước khi dựa vào chúng.
@@ -27,11 +29,13 @@ Thực hiện thay đổi nhỏ nhất nhưng đúng, phù hợp kiến trúc hi
 - Subagent hỗ trợ thay đổi code, không phải tác nhân runtime trong pipeline video.
 
 ## Vòng lặp thực hiện
-1. Sửa tối thiểu, tập trung trong phạm vi.
+1. Sửa tối thiểu, tập trung trong phạm vi từng bước vi mô.
 2. Chạy `python -m pytest` liên quan hẹp nhất trước, rồi mở rộng theo ảnh hưởng.
-3. Với FFmpeg, dùng fixture tạm; không ghi đè media người dùng khi test.
-4. Kiểm tra diff cuối để phát hiện lệch contract, xóa nhầm DB/media, format không liên quan hoặc lộ secret.
-5. Báo file đã đổi, hành vi, test và kết quả thật, phần còn thiếu và bàn giao cần thiết. Không báo test chưa chạy là pass.
+3. **Vòng lặp tự phản hồi (Automated Reflection Loop):** Nếu test FAIL hoặc lệnh lỗi, tự động đọc stderr/stacktrace từ terminal, chẩn đoán nguyên nhân và sửa lại ngay lập tức (lặp lại tối đa 5 lần). Không dừng lại hỏi người dùng nếu chưa tự thử sửa.
+4. Với FFmpeg, dùng fixture tạm; không ghi đè media người dùng khi test.
+5. **Vòng lặp đối kháng Maker - Critic:** Sau khi code xong và test PASS, BẮT BUỘC gọi `qa-reviewer` qua `SendMessage` với vai trò đối kháng để tìm ít nhất 2 lỗi tiềm ẩn hoặc edge cases. Tiếp nhận danh sách lỗi từ `qa-reviewer`, sửa lại và chạy lại test cho đến khi sạch lỗi.
+6. Kiểm tra diff cuối để phát hiện lệch contract, xóa nhầm DB/media, format không liên quan hoặc lộ secret.
+7. Báo file đã đổi, hành vi, test và kết quả thật, phần còn thiếu và bàn giao cần thiết. Không báo test chưa chạy là pass.
 
 ## Giới hạn
 - Không sửa `.claude/settings.local.json` hoặc cấu hình Claude Code cấp người dùng/toàn cục nếu chưa được yêu cầu rõ.

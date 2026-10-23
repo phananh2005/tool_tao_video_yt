@@ -4,15 +4,19 @@
 Các quy tắc MUST / NEVER / BEFORE / AFTER dưới đây đè lên mọi hành vi mặc định và phải được tuân thủ tuyệt đối:
 
 **MUST (Bắt buộc):**
-- **MUST** khởi tạo hoặc tiếp tục task nhiều bước bằng skill `task-state-init` (cập nhật checklist và state).
-- **MUST** chạy `reuse-scan` trước khi thêm helper, route, schema, component, pipeline mới. Bất kỳ thành phần dùng chung nào được tạo mới phải có Reuse Report giải thích lý do không tái sử dụng.
-- **MUST** làm theo `tdd-playbook`: viết/cập nhật test, chạy PASS test phạm vi hẹp rồi mở rộng. Chỉ đánh dấu task Done khi test đã PASS và (nếu thuộc phạm vi) đã được `qa-reviewer` duyệt.
+- **MUST** khởi tạo hoặc tiếp tục task nhiều bước bằng skill `task-state-init`, tự động phân rã thành các bước vi mô (Atomic Steps, mỗi bước ≤ 50 dòng code/1 hàm).
+- **MUST** chạy `reuse-scan` và thu thập code mẫu tương đương (Pattern Harvesting) trong repo trước khi viết code mới để làm chuẩn định dạng/xử lý lỗi.
+- **MUST** làm theo `tdd-playbook`: viết/cập nhật test trước, chạy test, nếu FAIL tự động đọc stacktrace và tự sửa (Reflection Loop, tối đa 5 lần). Chỉ đánh dấu task Done khi test đã PASS và đã qua vòng lặp Maker-Critic với `qa-reviewer`.
 - **MUST** chạy `code-review` nhanh 5 chiều trước khi commit; khi có thay đổi quy ước hoặc hành vi lặp lại, dùng `workflow-adapt` để cập nhật hạ tầng.
+- **MUST** tự động kích hoạt vòng lặp đối kháng Maker - Critic: `developer` viết code xong BẮT BUỘC gọi `qa-reviewer` qua `SendMessage` để bắt lỗi tiềm ẩn/edge cases trước khi coi là hoàn tất.
 - **MUST** dùng `debug-flow` cho các lỗi có thể tái hiện trước khi đoán và sửa code bừa bãi.
 - **MUST** hệ thống tự điều phối agent (agent hiện tại gọi `SendMessage` cho agent chuyên trách, không yêu cầu user tự gọi).
+- **MUST** cô lập ngữ cảnh (Context Isolation): các tác vụ khảo sát rộng, đọc log dài hoặc tìm kiếm nhiều file phải đẩy vào Subagent (`Agent` tool) để giữ context hội thoại chính sạch (< 50k tokens).
 
 **NEVER (Tuyệt đối không):**
 - **NEVER** bỏ qua playbook/skill đang bật để "code cho nhanh".
+- **NEVER** viết một khối code lớn (> 50 dòng) mà không chia nhỏ thành các bước kiểm thử vi mô.
+- **NEVER** dừng lại hỏi người dùng khi gặp lỗi test nếu chưa tự chạy vòng lặp reflection sửa lỗi (tối thiểu 3 lần thử).
 - **NEVER** tự ý thay đổi contract dùng chung, schema SQLite hoặc liên phase nếu chưa gọi `architect` thống nhất thiết kế.
 - **NEVER** tự ý thay đổi prompt template/đầu ra AI nếu chưa gọi `prompt-engineer`; không tự quyết định tiêu chí nội dung YouTube nếu chưa qua `youtube-strategist`.
 - **NEVER** đánh dấu Done nếu chưa chạy test, test chưa PASS (phải báo lệnh/kết quả), hoặc chưa giải quyết xong các lỗi do `qa-reviewer` chỉ ra.
@@ -23,6 +27,14 @@ Các quy tắc MUST / NEVER / BEFORE / AFTER dưới đây đè lên mọi hành
 - **BEFORE** thiết kế Backend/API: Đọc tài liệu convention liên quan trong repo.
 - **AFTER** hoàn thành thay đổi code: Chạy kiểm thử liên quan, dùng `progress-tracker` cập nhật checklist.
 - **AFTER** thay đổi lớn, contract hoặc schema: Gọi `qa-reviewer` review độc lập diff. Agent thực thi chỉ được kết thúc task (Done) khi `qa-reviewer` báo cáo không còn lỗi.
+
+## 1.1 Cơ chế thực thi Agentic nâng cao (Tự động hóa sâu)
+Để bù đắp suy luận nông của model Flash và đảm bảo output đạt chất lượng cao:
+1. **Phân rã siêu nhỏ (Autonomous Micro-Tasking):** Mọi task lập trình phải được chia thành các bước con không quá 50 dòng code/1 hàm. Làm tuần tự từng bước kèm unit test độc lập.
+2. **Khai thác code mẫu (Pattern Harvesting):** Luôn đọc ít nhất 1 file tương đương trong repo làm chuẩn few-shot trước khi tạo code mới.
+3. **Đối kháng Maker - Critic:** `developer` bắt buộc gửi diff cho `qa-reviewer` qua `SendMessage` với yêu cầu vạch lá tìm sâu ít nhất 2 edge cases/lỗi tiềm ẩn. `developer` tự sửa đến khi sạch lỗi.
+4. **Vòng lặp tự phản hồi (Automated Reflection Loop):** Lỗi test phải được đọc trực tiếp từ output terminal và tự động sửa tối đa 5 lần trước khi báo cáo.
+5. **Cô lập ngữ cảnh (Context Isolation):** Khảo sát rộng hoặc đọc log dài phải chạy qua subagent để giữ context chính dưới 50k tokens.
 
 ## 2. Tổng quan dự án
 TubeChain là công cụ sản xuất video YouTube theo hướng ưu tiên chạy tại máy người dùng. Mã nguồn dùng Python + FastAPI (`app.py`), SQLite (`core/database.py`), giao diện tĩnh (`web/`), module pipeline (`modules/`) và pytest (`tests/`). FFmpeg dùng ghép video cơ bản. Trước khi giả định dependency, hãy xác minh từ file.

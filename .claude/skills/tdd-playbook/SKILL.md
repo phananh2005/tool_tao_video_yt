@@ -24,7 +24,14 @@ Dùng cho thay đổi hành vi, sửa lỗi và logic mới trong TubeChain. Tha
 ### Bước 2 — Green (Triển khai tối thiểu)
 1. Viết lượng code tối thiểu, đơn giản nhất để test chuyển sang PASS.
 2. Giữ nguyên ranh giới contract giữa các phase trừ khi đã được `architect` thống nhất.
-3. Chạy lại test: `python -m pytest tests/test_xxx.py -k test_name -v` và kiểm tra PASS.
+3. Chạy lại test: `python -m pytest tests/test_xxx.py -k test_name -v`.
+4. **Vòng lặp tự phản hồi (Automated Reflection Loop):**
+   - Nếu test FAIL: **TUYỆT ĐỐI KHÔNG** dừng lại hỏi người dùng.
+   - Tự động đọc chi tiết stacktrace, traceback, và thông điệp lỗi từ terminal.
+   - Phân tích nguyên nhân (TypeError, KeyError, AssertionError, Mock mismatch...).
+   - Sửa lại code và chạy lại test ngay lập tức.
+   - Được phép tự động lặp lại quy trình sửa - chạy test tối đa **5 lần**.
+   - Chỉ khi sau 5 lần tự sửa mà vẫn không PASS mới dừng lại báo cáo nguyên nhân và xin hướng dẫn.
 
 ### Bước 3 — Refactor (Tối ưu mã nguồn)
 1. Dọn dẹp mã nguồn, loại bỏ trùng lặp, tối ưu cấu trúc mà không thay đổi hành vi bên ngoài.

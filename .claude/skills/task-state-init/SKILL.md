@@ -25,10 +25,16 @@ Dùng với tính năng lớn, sửa lỗi nhiều bước, thay đổi liên ph
 - Đánh giá mức nhẹ: loại thay đổi, phạm vi thô, yếu tố đặc biệt (migration, đổi contract, bảo mật).
 - KHÔNG đọc sâu kiến trúc — đó là việc của agent `developer`.
 
-### Bước 3 — Ghi file
+### Bước 3 — Ghi file & Phân rã siêu nhỏ (Micro-Tasking)
 Ghi `.claude/state/current-task.md` theo template `.claude/state/_template/current-task.md`:
-- Điền Mô tả, Thiết kế liên quan, DoD, Các bước tổng quan.
-- Để TRỐNG "Tái sử dụng" và "Kế hoạch chi tiết" — agent `developer` điền ở bước lập kế hoạch.
+- Điền Mô tả, Thiết kế liên quan, DoD.
+- **Bắt buộc phân rã siêu nhỏ (Atomic Steps):** Các bước thực hiện phải được chẻ nhỏ đến mức mỗi bước chỉ can thiệp **tối đa 1 hàm hoặc 1 file (≤ 50 dòng code)**. Tuyệt đối không dùng các bước chung chung như "Viết toàn bộ Phase 4". Mẫu phân rã chuẩn:
+  - Bước 1: Thu thập code mẫu tương đương (Pattern Harvesting).
+  - Bước 2: Viết/sửa test case đơn lẻ cho hàm mục tiêu.
+  - Bước 3: Triển khai code tối thiểu cho hàm đó.
+  - Bước 4: Chạy test và tự sửa nếu lỗi (Reflection loop).
+  - Bước 5: Gọi `qa-reviewer` đối kháng rà soát trước khi đóng task.
+- Để TRỐNG "Tái sử dụng" (do `reuse-scan` điền) và điền các bước con vào "Kế hoạch chi tiết".
 
 ### Bước 4 — Xác nhận
 Hiển thị task vừa tạo, hỏi "Bắt đầu implement không?".
