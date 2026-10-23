@@ -1,12 +1,37 @@
 ---
-name: progress-tracker
-description: Cập nhật checklist task TubeChain và nối ghi chú tiến độ/xác minh ngắn gọn, giữ nguyên lịch sử state.
+description: >
+  Cập nhật tiến độ task đang làm. Kích hoạt tự động sau MỖI bước implement hoàn thành, hoặc khi
+  nghe "đến đâu rồi", "tiến độ", "update progress", "xong bước", "đã xong [X]", "còn lại gì".
+  Ghi progress.md và tick current-task.md trong .claude/state/; chỉ đổi status done khi test đã PASS.
 ---
 
-# Theo dõi tiến độ task
+# Progress Tracker
 
-1. Đọc `.claude/state/current-task.md` và `.claude/state/progress.md` trước khi sửa.
-2. Chỉ đánh dấu hoàn tất sau khi bước đó đã làm và xác minh. Không đánh dấu test, review hoặc bàn giao xong chỉ vì dự định sẽ làm.
-3. Nối một dòng có ngày giờ vào `progress.md`, nêu việc hoàn tất và kết quả xác minh. Ghi rõ lỗi, blocker và phần bỏ qua.
-4. Nếu scope thay đổi, cập nhật minh bạch mục tiêu/checklist; không lặng lẽ xóa mục chưa xong.
-5. Giữ log theo thứ tự thời gian, ngắn, đúng sự thật, không chứa secret hoặc output lệnh nguyên văn. Không tạo state file cho việc nhỏ nếu không được yêu cầu.
+## MUST trigger
+- Hoàn thành bất kỳ bước nào trong quá trình implement — không chờ người dùng hỏi.
+- Mọi DoD đã tick → xét đổi `status: done` (qua cổng test bên dưới).
+
+**NEVER** kết thúc một bước implement mà không cập nhật `progress.md` và tick checkbox.
+
+## Quy trình
+
+### Bước 1 — Đọc state
+- Đọc `.claude/state/current-task.md`. Chưa có → nhắc chạy `task-state-init`, dừng.
+
+### Bước 2 — Đánh giá
+- Tick DoD, bước tổng quan, bước con trong "Kế hoạch chi tiết" đã xong (dựa trên code đã viết + output đã chạy).
+- Ước tính % theo bước con (nếu có), không thì theo bước tổng quan.
+
+### Bước 3 — Ghi `progress.md`
+Cập nhật `.claude/state/progress.md` theo template.
+
+### Bước 4 — Báo ngắn
+`Task [tên]: [X]% — đang làm [bước]. Còn [N] bước.`
+
+### Bước 5 — Cổng test trước `done`
+- Chỉ tick DoD liên quan code và đổi `status: done` khi đã có **output test thật, PASS** trong phiên.
+- Chưa chạy / còn fail → giữ `status: in_progress`, không tick DoD đó, nêu lý do.
+- Repo không có test → DoD ghi cách kiểm chứng đã làm + giới hạn; không được ghi "test PASS".
+
+## Liên kết
+- Khởi tạo task → `task-state-init`

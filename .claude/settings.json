@@ -7,7 +7,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python .claude/hooks/pre-tool-use.py"
+            "command": "python \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/pre-tool-use.py\""
           }
         ]
       }
@@ -18,7 +18,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python .claude/hooks/post-tool-use-tdd-guard.py"
+            "command": "python \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/post-tool-use-tdd-guard.py\""
           }
         ]
       }

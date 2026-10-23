@@ -48,7 +48,8 @@
 |---|---|---|
 | Hub chỉ dẫn dự án | Có | `CLAUDE.md` ghi constraint, liên kết skill, định tuyến và workflow. |
 | Subagent | Có (5) | `.claude/agents/`: `youtube-strategist`, `prompt-engineer`, `architect`, `developer`, `qa-reviewer`. Frontmatter dùng alias `opus`/`sonnet`; tài liệu repo ghi runtime người dùng ánh xạ chúng sang Gemini 3.1 Pro và Gemini 3.8 Flash. |
-| Skill | Có (5) | `.claude/skills/<name>/SKILL.md`: task-state-init, progress-tracker, reuse-scan, debug-flow, tdd-playbook. |
+| Skill | Có (7) | `.claude/skills/<name>/SKILL.md`: `task-state-init`, `progress-tracker`, `reuse-scan`, `debug-flow`, `tdd-playbook`, `code-review`, `workflow-adapt`. |
+| Knowledge & Chuẩn phi chức năng | Có | `docs/agent/knowledge/`: `non-functional-standards.md` (chuẩn truy vấn SQLite & hiệu năng), `adaptation-rules.md` (bản đồ tín hiệu thích ứng). |
 | Template trạng thái task | Có | `.claude/state/_template/`: current-task, progress, decisions-log. Không thấy file state task đang chạy trong inventory khảo sát. |
 | Hook | Có, đang bật trong project settings | `.claude/settings.json` đăng ký PreToolUse cho `Bash`, PostToolUse cho `Write|Edit`; script trong `.claude/hooks/`. Đây là kiểm tra hẹp, không phải sandbox. |
 | Test hook | Có | `tests/test_claude_hooks.py` bao phủ một số lệnh force-push/root-delete/DB-delete, lệnh an toàn, payload và lời nhắc advisory. |

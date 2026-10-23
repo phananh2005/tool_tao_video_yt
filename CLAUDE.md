@@ -7,6 +7,7 @@ Các quy tắc MUST / NEVER / BEFORE / AFTER dưới đây đè lên mọi hành
 - **MUST** khởi tạo hoặc tiếp tục task nhiều bước bằng skill `task-state-init` (cập nhật checklist và state).
 - **MUST** chạy `reuse-scan` trước khi thêm helper, route, schema, component, pipeline mới. Bất kỳ thành phần dùng chung nào được tạo mới phải có Reuse Report giải thích lý do không tái sử dụng.
 - **MUST** làm theo `tdd-playbook`: viết/cập nhật test, chạy PASS test phạm vi hẹp rồi mở rộng. Chỉ đánh dấu task Done khi test đã PASS và (nếu thuộc phạm vi) đã được `qa-reviewer` duyệt.
+- **MUST** chạy `code-review` nhanh 5 chiều trước khi commit; khi có thay đổi quy ước hoặc hành vi lặp lại, dùng `workflow-adapt` để cập nhật hạ tầng.
 - **MUST** dùng `debug-flow` cho các lỗi có thể tái hiện trước khi đoán và sửa code bừa bãi.
 - **MUST** hệ thống tự điều phối agent (agent hiện tại gọi `SendMessage` cho agent chuyên trách, không yêu cầu user tự gọi).
 
@@ -56,8 +57,9 @@ Trong runtime user, alias `opus` = Gemini 3.1 Pro, `sonnet` = Gemini 3.8 Flash (
 
 ## 6. File của framework
 - Subagent riêng dự án: `.claude/agents/`
-- Skill có thể nạp: `.claude/skills/<skill-name>/SKILL.md`
+- Skill có thể nạp: `.claude/skills/<skill-name>/SKILL.md` (gồm: `task-state-init`, `progress-tracker`, `reuse-scan`, `tdd-playbook`, `debug-flow`, `code-review`, `workflow-adapt`)
 - Cấu hình và script hook: `.claude/settings.json`, `.claude/hooks/`
 - Template state dùng lại: `.claude/state/_template/`
+- Chuẩn phi chức năng & Thích ứng: `docs/agent/knowledge/non-functional-standards.md`, `docs/agent/knowledge/adaptation-rules.md`
 - Tổng quan sản phẩm: `README.md`; mô tả chi tiết: `system-description.md`
 - Bản đồ harness: `docs/agent/README.md`, `docs/agent/workflows.md`

@@ -1,13 +1,42 @@
 ---
-name: debug-flow
-description: Chẩn đoán lỗi TubeChain có thể tái hiện hoặc test thất bại theo từng bước trước khi sửa code.
-argument-hint: [failure-or-test]
+description: >
+  Debug có hệ thống theo 4 bước Reproduce → Isolate → Diagnose → Fix. Kích hoạt khi
+  "debug", "lỗi", "bug", "exception", "error", "không chạy", "tại sao lại…".
+  KHÔNG đề xuất nguyên nhân khi chưa tái hiện.
 ---
 
-# Quy trình debug: tái hiện, cô lập, chẩn đoán, sửa
+# Debug Flow
 
-1. **Tái hiện:** Ghi nhận lỗi, input, trạng thái và lệnh chính xác. Tạo hoặc tìm regression test tập trung. Dùng SQLite tạm và fixture; không gây rủi ro cho DB thật hoặc media người dùng.
-2. **Cô lập:** Thu hẹp lỗi về route, contract, thao tác SQLite, module phase, frontend, provider adapter hoặc lệnh FFmpeg. Chạy test thất bại nhỏ nhất.
-3. **Chẩn đoán:** Lần theo nơi gọi và dữ liệu; xác định nguyên nhân gốc bằng bằng chứng. Kiểm tra giá trị biên và khả năng tài liệu/schema lệch implementation.
-4. **Sửa:** Thực hiện thay đổi nhỏ nhất xử lý nguyên nhân; thêm/sửa regression test. Áp dụng `tdd-playbook` khi phù hợp.
-5. **Xác minh:** Chạy lại lỗi tái hiện, test module liên quan và test rộng hơn nếu cần. Báo đúng kết quả và phần còn chưa chắc chắn.
+## MUST trigger
+- Nhận báo lỗi.
+- Agent định đoán nguyên nhân khi chưa tái hiện — **dừng, quay về Bước 1**.
+
+**NEVER** đề xuất nguyên nhân khi chưa qua Bước 1.
+
+## Quy trình (đúng thứ tự)
+
+### Bước 1 — Reproduce
+- Triệu chứng cụ thể; input gây lỗi; stack trace / log quanh thời điểm lỗi (đã redact).
+- Tái hiện ở môi trường nhỏ nhất (ưu tiên một test FAIL).
+- Không tái hiện được → không đoán; thu thêm dữ liệu hoặc hỏi người dùng.
+
+### Bước 2 — Isolate
+- Khoanh module xảy ra lỗi — chưa cần biết vì sao.
+- Checklist theo đặc trưng TubeChain:
+  - API/route: ranh giới request, JSON parse, DB connection, timeout gọi adapter
+  - Pipeline module: input/output contract, adapter response format, file I/O
+  - SQLite: transaction, migration, column mismatch
+  - FFmpeg: subprocess exit code, file path, codec
+  - Playwright/Adapter: selector, timeout, session state
+
+### Bước 3 — Diagnose
+- Tìm **root cause** (5 Whys), không dừng ở triệu chứng.
+- So cấu hình ứng dụng với biến môi trường (chỉ so **tên key**, không in giá trị bí mật).
+
+### Bước 4 — Fix
+- Fix nhỏ nhất xử lý root cause; viết test chặn tái diễn; chạy `python -m pytest`, dán output.
+
+## Dừng và hỏi
+- Lỗi chập chờn không tái hiện được.
+- Root cause ở adapter/service bên ngoài (Gemini web).
+- Fix cần thay đổi kiến trúc → bàn giao cho `architect`.

@@ -28,7 +28,14 @@ The application entry point is `app.py`; it binds the FastAPI server to `127.0.0
 python app.py
 ```
 
-Install the dependencies used by the project in your Python environment before starting it. This repository currently has no root `requirements.txt` or `pyproject.toml`, so dependency installation is not specified here. FFmpeg must be available on `PATH` for video rendering.
+Install dependencies and setup Playwright before running:
+
+```bash
+pip install -r requirements.txt
+playwright install chromium
+```
+
+FFmpeg must be available on `PATH` for video rendering.
 
 Open `http://127.0.0.1:8000` in a browser.
 

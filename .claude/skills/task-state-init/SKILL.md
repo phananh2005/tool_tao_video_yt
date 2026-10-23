@@ -1,6 +1,6 @@
 ---
 name: task-state-init
-description: Bắt đầu hoặc tiếp tục task TubeChain có nhiều bước bằng checklist và state bàn giao ngắn gọn, không ghi đè task đang chạy.
+description: Bắt đầu hoặc tiếp tục task TubeChain có nhiều bước bằng checklist và state bàn giao ngắn gọn. Kích hoạt khi nghe "implement [X]", "build [X]", "tạo [X]", "viết [X]", "thêm tính năng [X]", "bắt đầu làm [X]", "start task". Không ghi đè task đang chạy.
 argument-hint: [task-title]
 ---
 
@@ -8,8 +8,41 @@ argument-hint: [task-title]
 
 Dùng với tính năng lớn, sửa lỗi nhiều bước, thay đổi liên phase hoặc khi người dùng muốn theo dõi tiến độ. Bỏ qua với câu hỏi nhỏ hay thay đổi một dòng.
 
-1. Nếu có, đọc `.claude/state/current-task.md` và `.claude/state/progress.md`. Nếu task đang chạy, không ghi đè: xác định yêu cầu mới có tiếp tục task đó không; nếu không thì hỏi người dùng muốn đóng task cũ hay tạo task khác.
-2. Dùng `.claude/state/_template/current-task.md` làm cấu trúc. Tạo `.claude/state/current-task.md` với mục tiêu, phạm vi, ràng buộc, tiêu chí nghiệm thu và checklist ngắn. Không bịa thông tin implementation.
-3. Chỉ khởi tạo `.claude/state/progress.md` từ template nếu file chưa có. Nếu đã có, nối thêm dòng bắt đầu/tiếp tục có ngày giờ và giữ nguyên lịch sử.
-4. Chỉ ghi quyết định kiến trúc quan trọng vào `.claude/state/decisions-log.md` khi log đó đã tồn tại hoặc người dùng yêu cầu. Không ghi đè quyết định cũ.
-5. Giữ state ngắn và đúng sự thật; dẫn link/path thay vì chép nội dung source dài.
+## MUST trigger
+**MUST** thực thi khi nhận request implement **VÀ** chưa có `current-task.md` với `status: in_progress`.
+
+**NEVER** bắt đầu viết code khi chưa xong đủ 4 bước dưới.
+
+## Quy trình
+
+### Bước 1 — Kiểm tra task đang có
+- Đọc `.claude/state/current-task.md` và `.claude/state/progress.md`.
+- `status: in_progress` → hỏi user: tiếp tục task cũ hay tạo mới.
+- `status: done` / `idle` / không có file → tạo mới.
+
+### Bước 2 — Thu thập thông tin
+- Hỏi nếu chưa rõ: tên task, Definition of Done, ràng buộc kỹ thuật.
+- Đánh giá mức nhẹ: loại thay đổi, phạm vi thô, yếu tố đặc biệt (migration, đổi contract, bảo mật).
+- KHÔNG đọc sâu kiến trúc — đó là việc của agent `developer`.
+
+### Bước 3 — Ghi file
+Ghi `.claude/state/current-task.md` theo template `.claude/state/_template/current-task.md`:
+- Điền Mô tả, Thiết kế liên quan, DoD, Các bước tổng quan.
+- Để TRỐNG "Tái sử dụng" và "Kế hoạch chi tiết" — agent `developer` điền ở bước lập kế hoạch.
+
+### Bước 4 — Xác nhận
+Hiển thị task vừa tạo, hỏi "Bắt đầu implement không?".
+
+Nếu có, khởi tạo `.claude/state/progress.md` từ template nếu file chưa có. Nếu đã có, nối thêm dòng bắt đầu/tiếp tục có ngày giờ và giữ nguyên lịch sử.
+
+## Output
+- File `.claude/state/current-task.md` với `status: in_progress`.
+
+## Điều kiện dừng
+- User chưa xác nhận tiếp tục hay ghi đè task đang dở.
+- Không xác định được DoD.
+
+## Liên kết
+- Quét tái sử dụng → skill `reuse-scan`
+- Kế hoạch chi tiết → agent `developer`
+- Cập nhật tiến độ → skill `progress-tracker`

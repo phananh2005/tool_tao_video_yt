@@ -60,8 +60,17 @@ Không chạy migration database hoặc dọn dữ liệu phá hủy để tái 
 - Thay đổi hành vi: theo `tdd-playbook` (Red → Green → Refactor); không nói đã thấy Red nếu chưa chạy test thất bại.
 - Lệnh test đã được ghi trong README: `python -m pytest`. Chưa xác nhận lệnh lint/type-check/build toàn repo.
 - Chạy test liên quan hẹp nhất trước; mở rộng suite theo mức ảnh hưởng. Báo lệnh, kết quả, test bỏ qua và lý do.
-- `qa-reviewer` kiểm tra code đổi, caller/contract trực tiếp và test; rà SQL parameterization, phạm vi path/xóa, secret, ràng buộc phase, tài nguyên/subprocess và trùng lặp không cần thiết.
+- **Trước khi commit:** Bắt buộc chạy skill `code-review` nhanh 5 chiều (Security, Performance, Correctness, Style, Reuse).
+- **Trước khi mở PR/hoàn tất task lớn:** `qa-reviewer` kiểm tra độc lập diff, caller/contract trực tiếp và test; rà SQL parameterization, phạm vi path/xóa, secret, ràng buộc phase, tài nguyên/subprocess và trùng lặp không cần thiết.
 - Hook nhắc nhở không chứng minh TDD đã được làm; test cũng không thay thế diff review.
+
+### Tự điều chỉnh cách làm việc (Workflow Adaptation)
+
+Khi phát hiện agent lặp lại hành vi sai quy ước (≥ 2 lần), lệnh test đã đổi, hoặc quy tắc mâu thuẫn code:
+1. Dùng skill `workflow-adapt`.
+2. Đối chiếu tín hiệu trong `docs/agent/knowledge/adaptation-rules.md`.
+3. Trình đề xuất điều chỉnh cho người dùng duyệt trước khi sửa cấu hình/hạ tầng.
+4. Ghi nhận dấu vết vào `.agent-bootstrap/project-profile.md` và `.claude/state/decisions-log.md`.
 
 ### Tài liệu
 

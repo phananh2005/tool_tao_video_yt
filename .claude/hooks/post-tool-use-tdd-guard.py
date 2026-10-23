@@ -48,9 +48,9 @@ def main() -> int:
                 "hookSpecificOutput": {
                     "hookEventName": "PostToolUse",
                     "additionalContext": (
-                        f"TDD reminder: `{file_path}` was changed. Add or update a focused "
-                        "pytest test, run it (and relevant broader tests), and report actual "
-                        "results. This is advisory; this post-tool hook cannot block or undo edits."
+                        f"TDD reminder: `{file_path}` đã được sửa. Thêm hoặc cập nhật test pytest "
+                        "tập trung, chạy test liên quan, và báo cáo kết quả thật. "
+                        "Đây chỉ là lời nhắc; hook này cannot block or undo edits."
                     ),
                 }
             }

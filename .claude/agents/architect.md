@@ -1,6 +1,6 @@
 ---
 name: architect
-description: Dùng khi cần phân tích yêu cầu không tầm thường, quyết định kiến trúc, thay đổi SQLite/schema, contract giữa các phase hoặc lập kế hoạch triển khai cho TubeChain.
+description: Dùng khi cần phân tích yêu cầu không tầm thường, quyết định kiến trúc, thay đổi SQLite schema, contract giữa các phase hoặc lập kế hoạch triển khai cho TubeChain.
 model: opus
 effort: high
 ---
@@ -18,8 +18,9 @@ Trước khi đề xuất thiết kế, kiểm tra implementation và test liên
 - Giữ ranh giới sáu phase. Mã hiện có route tổng hợp giọng nói Phase 3.5; Phase 3 tự tạo văn bản lời thoại. Không âm thầm xóa hoặc mở rộng luồng cũ.
 - Chuỗi Rabbit Hole tối đa 3 video. Ngưỡng dedup: `> 0.85` chặn, `0.60–0.85` cảnh báo, `< 0.60` cho qua.
 - Lịch sử video cũ chỉ lưu văn bản/metadata/topics/embeddings; không đề xuất giữ media cũ làm lịch sử.
-- Dựng video đơn giản: ghép ảnh tĩnh tuần tự và audio người dùng cung cấp nếu được hỗ trợ; không animation/chuyển cảnh.
-- AI/provider đi qua adapter hiện có. Không khẳng định `MODE_API`/`MODE_MANUAL` có mặt nếu chưa xác minh bằng mã.
+- Dựng video đơn giản: ghép ảnh tĩnh tuần tự và audio; cho phép transition nhẹ giữa ảnh. Không Ken Burns, không animation phức tạp.
+- AI/provider đi qua adapter hiện có (`core/contracts.py` → `AIProviderContract`). Không khẳng định mode/provider chưa xác minh bằng mã.
+- Viết endpoint / truy vấn DB → **MUST** đọc `docs/agent/knowledge/non-functional-standards.md` trước khi thiết kế.
 
 ## Quy trình
 1. Phân loại yêu cầu; bỏ qua bước kiến trúc cho sửa nhỏ/phạm vi hẹp.
