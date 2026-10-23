@@ -15,9 +15,16 @@ Thực hiện thay đổi nhỏ nhất nhưng đúng, phù hợp kiến trúc hi
 2. **Khai thác code mẫu (Pattern Harvesting):** Tìm và đọc ít nhất 1 file/hàm tương đương có sẵn trong repo (ví dụ engine cũ, test cũ) để lấy mẫu chuẩn về cách parse JSON, logging UTF-8, kiểu dữ liệu và bắt lỗi.
 3. Chạy skill `reuse-scan` trước khi thêm helper, route, schema, component hoặc hành vi lặp lại.
 4. **Phân rã siêu nhỏ (Micro-Tasking):** Chẻ nhỏ nhiệm vụ thành danh sách các bước vi mô (Atomic Steps) trong `current-task.md`. Mỗi bước chỉ tác động tối đa 1 hàm hoặc 1 file (≤ 50 dòng code). Tuyệt đối không làm gộp nhiều bước cùng lúc.
-5. Với thay đổi hành vi và sửa lỗi, làm theo `tdd-playbook`: thêm/sửa test tập trung, chạy để quan sát lỗi phù hợp khi khả thi, implement, chạy lại và refactor. Không được nói đã thấy Red nếu chưa chạy test thất bại.
-6. Nếu cần đổi contract dùng chung, schema DB hoặc thiết kế thuộc module khác, xin bàn giao từ Architect thay vì tự nghĩ định dạng mới.
-7. Viết endpoint / truy vấn DB → **MUST** đọc `docs/agent/knowledge/non-functional-standards.md` trước khi lập kế hoạch.
+5. **Chuỗi tự kiểm điểm đa tầng trước khi ghi file (Pre-Write Verification Chain):**
+   Trước khi gọi bất kỳ lệnh `Write` hoặc `Edit` nào, Developer BẮT BUỘC tự rà soát ngầm qua 4 câu hỏi đối kháng:
+   - *Độ lớn:* Đoạn code định ghi có vượt quá 50 dòng / 1 hàm không? Nếu có → chia nhỏ ngay.
+   - *Trường hợp biên (Edge cases):* Nếu đầu vào là `None`, `[]`, dict rỗng, chuỗi trắng thì hàm có crash không?
+   - *Hiệu năng SQLite:* Có bất kỳ câu lệnh SQL nào lọt vào trong vòng lặp `for`/`while` không?
+   - *Bảo mật & Chuẩn mực:* Có dùng tham số hóa `?` trong SQL không? Có lộ secret không? Đã bọc try/except và log UTF-8 chưa?
+   Sửa dứt điểm các lỗi phát hiện trước khi chính thức gọi công cụ ghi file.
+6. Với thay đổi hành vi và sửa lỗi, làm theo `tdd-playbook`: thêm/sửa test tập trung, chạy để quan sát lỗi phù hợp khi khả thi, implement, chạy lại và refactor. Không được nói đã thấy Red nếu chưa chạy test thất bại.
+7. Nếu cần đổi contract dùng chung, schema DB hoặc thiết kế thuộc module khác, xin bàn giao từ Architect thay vì tự nghĩ định dạng mới.
+8. Viết endpoint / truy vấn DB → **MUST** đọc `docs/agent/knowledge/non-functional-standards.md` trước khi lập kế hoạch.
 
 ## Ràng buộc dự án đã xác minh
 - Mã hiện dùng Python và FastAPI (`app.py`), SQLite (`core/database.py`), web tĩnh (`web/`), FFmpeg và pytest trong `tests/`. Xác minh dependency và lệnh từ file dự án trước khi dựa vào chúng.

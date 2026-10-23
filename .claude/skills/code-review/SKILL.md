@@ -41,10 +41,15 @@ Review diff nhanh trước khi commit mã nguồn vào Git. Đảm bảo chất 
    - Có kiểm tra trùng lặp chưa (Reuse Report)?
    - Có hàm helper nào lặp lại logic đã có trong `core/` hoặc module khác không?
 
-### 3. Phân loại findings
+### 3. Chuỗi tự kiểm điểm đối kháng (Multi-Pass Audit)
+Trước khi đưa ra kết luận, reviewer BẮT BUỘC tự kiểm tra thêm:
+- Đã cố gắng tưởng tượng ít nhất 1 tình huống dữ liệu "dị" có thể bẻ gãy code này chưa?
+- Test đi kèm có test case nào cho giá trị rỗng/lỗi không? Nếu chưa có → đánh dấu MAJOR để bổ sung.
+
+### 4. Phân loại findings
 - **CRITICAL:** Lỗ hổng bảo mật, nguy cơ mất dữ liệu/xóa nhầm database, sai logic nghiệp vụ nghiêm trọng. Phải sửa ngay.
 - **MAJOR:** Vi phạm hiệu năng (query trong vòng lặp), thiếu test case biên, lệch contract. Phải sửa trước khi hoàn thành task.
 - **MINOR:** Format code, đặt tên chưa tối ưu. Có thể sửa hoặc ghi chú.
 
-### 4. Báo cáo & Khắc phục
+### 5. Báo cáo & Khắc phục
 - Mỗi finding cần chỉ rõ `file_path:line_number`, kịch bản lỗi, và code đề xuất sửa.

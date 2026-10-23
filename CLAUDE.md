@@ -8,6 +8,7 @@ Các quy tắc MUST / NEVER / BEFORE / AFTER dưới đây đè lên mọi hành
 - **MUST** chạy `reuse-scan` và thu thập code mẫu tương đương (Pattern Harvesting) trong repo trước khi viết code mới để làm chuẩn định dạng/xử lý lỗi.
 - **MUST** làm theo `tdd-playbook`: viết/cập nhật test trước, chạy test, nếu FAIL tự động đọc stacktrace và tự sửa (Reflection Loop, tối đa 5 lần). Chỉ đánh dấu task Done khi test đã PASS và đã qua vòng lặp Maker-Critic với `qa-reviewer`.
 - **MUST** chạy `code-review` nhanh 5 chiều trước khi commit; khi có thay đổi quy ước hoặc hành vi lặp lại, dùng `workflow-adapt` để cập nhật hạ tầng.
+- **MUST** thực hiện chuỗi tự kiểm điểm đa tầng (Multi-Pass Self-Verification Chain): không bao giờ xuất output hoặc ghi file sau một lượt nghĩ đơn lẻ. Bắt buộc qua 3 bước: Phác thảo (Draft) → Soi lỗi đối kháng nội bộ (Audit: biên, null, SQL trong loop, độ dài ≤ 50 dòng) → Tinh chỉnh (Refine & Patch) trước khi ghi file hoặc báo cáo.
 - **MUST** tự động kích hoạt vòng lặp đối kháng Maker - Critic: `developer` viết code xong BẮT BUỘC gọi `qa-reviewer` qua `SendMessage` để bắt lỗi tiềm ẩn/edge cases trước khi coi là hoàn tất.
 - **MUST** dùng `debug-flow` cho các lỗi có thể tái hiện trước khi đoán và sửa code bừa bãi.
 - **MUST** hệ thống tự điều phối agent (agent hiện tại gọi `SendMessage` cho agent chuyên trách, không yêu cầu user tự gọi).
@@ -15,6 +16,7 @@ Các quy tắc MUST / NEVER / BEFORE / AFTER dưới đây đè lên mọi hành
 
 **NEVER (Tuyệt đối không):**
 - **NEVER** bỏ qua playbook/skill đang bật để "code cho nhanh".
+- **NEVER** xuất kết quả phân tích hoặc ghi code ngay sau lượt nghĩ đầu tiên mà không qua bước tự soi lỗi đối kháng nội bộ.
 - **NEVER** viết một khối code lớn (> 50 dòng) mà không chia nhỏ thành các bước kiểm thử vi mô.
 - **NEVER** dừng lại hỏi người dùng khi gặp lỗi test nếu chưa tự chạy vòng lặp reflection sửa lỗi (tối thiểu 3 lần thử).
 - **NEVER** tự ý thay đổi contract dùng chung, schema SQLite hoặc liên phase nếu chưa gọi `architect` thống nhất thiết kế.
@@ -28,15 +30,16 @@ Các quy tắc MUST / NEVER / BEFORE / AFTER dưới đây đè lên mọi hành
 - **AFTER** hoàn thành thay đổi code: Chạy kiểm thử liên quan, dùng `progress-tracker` cập nhật checklist.
 - **AFTER** thay đổi lớn, contract hoặc schema: Gọi `qa-reviewer` review độc lập diff. Agent thực thi chỉ được kết thúc task (Done) khi `qa-reviewer` báo cáo không còn lỗi.
 
-## 1.1 Cơ chế thực thi Agentic nâng cao (7 trụ cột tự động hóa cho model Flash)
+## 1.1 Cơ chế thực thi Agentic nâng cao (8 trụ cột tự động hóa cho model Flash)
 Để bù đắp suy luận nông của model Flash và đảm bảo output đạt chất lượng như Claude:
-1. **Phân rã siêu nhỏ (Autonomous Micro-Tasking):** Mọi task lập trình phải được chia thành các bước con không quá 50 dòng code/1 hàm. Hook PostToolUse sẽ phát cảnh báo nếu Write/Edit vượt quá 60 dòng code trong một lượt.
-2. **Khai thác code mẫu (Pattern Harvesting):** Luôn tìm và đọc ít nhất 1 file/hàm có sẵn tương đương trong repo làm mẫu few-shot trước khi viết code mới; trích xuất mẫu vào `current-task.md`.
-3. **Đối kháng Maker - Critic:** `developer` sau khi test pass bắt buộc gửi diff cho `qa-reviewer` qua `SendMessage` với vai trò đối kháng vạch lá tìm sâu (tìm ít nhất 1–2 edge cases/lỗi tiềm ẩn). Bắt buộc có kết luận sạch lỗi mới được tick hoàn thành DoD.
-4. **Vòng lặp tự phản hồi có cấu trúc (Automated Reflection Loop):** Lỗi test phải được đọc trực tiếp từ terminal, chẩn đoán theo 3 bước (Trích xuất dòng lỗi → Giả thuyết nguyên nhân → Sửa tối thiểu) và tự sửa tối đa 5 lần trước khi báo cáo.
-5. **Kiểm tra cú pháp nhanh (Pre-flight Syntax Check):** Trước khi chạy pytest, bắt buộc chạy `python -m py_compile <file>` để bắt lỗi cú pháp và thụt lề trong 0.1s.
-6. **Cô lập ngữ cảnh (Context Isolation):** Khảo sát rộng hoặc đọc log dài phải chạy qua subagent (`Agent` tool) để giữ context chính dưới 50k tokens, tránh attention dilution.
-7. **Vệ sinh ngữ cảnh tự động (Context Pruning):** Sau khi hoàn thành và commit một task lớn, bắt buộc gõ `/clear` để dọn sạch ngữ cảnh tích tụ, đưa model về trạng thái suy luận nhạy bén nhất.
+1. **Chuỗi tự kiểm điểm đa tầng (Multi-Pass Self-Verification Chain):** Mọi tác vụ sinh code, lập kế hoạch hoặc review đều bắt buộc tự chạy qua 3 pha ngầm: Pha 1 (Draft giải pháp) → Pha 2 (Soi lỗi đối kháng: rà soát null, giá trị biên, SQL loop, độ dài ≤ 50 dòng) → Pha 3 (Tinh chỉnh & vá lỗi trước khi gọi Write/Edit hoặc xuất kết quả).
+2. **Phân rã siêu nhỏ (Autonomous Micro-Tasking):** Mọi task lập trình phải được chia thành các bước con không quá 50 dòng code/1 hàm. Hook PostToolUse sẽ phát cảnh báo nếu Write/Edit vượt quá 60 dòng code trong một lượt.
+3. **Khai thác code mẫu (Pattern Harvesting):** Luôn tìm và đọc ít nhất 1 file/hàm có sẵn tương đương trong repo làm mẫu few-shot trước khi viết code mới; trích xuất mẫu vào `current-task.md`.
+4. **Đối kháng Maker - Critic:** `developer` sau khi test pass bắt buộc gửi diff cho `qa-reviewer` qua `SendMessage` với vai trò đối kháng vạch lá tìm sâu (tìm ít nhất 1–2 edge cases/lỗi tiềm ẩn). Bắt buộc có kết luận sạch lỗi mới được tick hoàn thành DoD.
+5. **Vòng lặp tự phản hồi có cấu trúc (Automated Reflection Loop):** Lỗi test phải được đọc trực tiếp từ terminal, chẩn đoán theo 3 bước (Trích xuất dòng lỗi → Giả thuyết nguyên nhân → Sửa tối thiểu) và tự sửa tối đa 5 lần trước khi báo cáo.
+6. **Kiểm tra cú pháp nhanh (Pre-flight Syntax Check):** Trước khi chạy pytest, bắt buộc chạy `python -m py_compile <file>` để bắt lỗi cú pháp và thụt lề trong 0.1s.
+7. **Cô lập ngữ cảnh (Context Isolation):** Khảo sát rộng hoặc đọc log dài phải chạy qua subagent (`Agent` tool) để giữ context chính dưới 50k tokens, tránh attention dilution.
+8. **Vệ sinh ngữ cảnh tự động (Context Pruning):** Sau khi hoàn thành và commit một task lớn, bắt buộc gõ `/clear` để dọn sạch ngữ cảnh tích tụ, đưa model về trạng thái suy luận nhạy bén nhất.
 
 ## 2. Tổng quan dự án
 TubeChain là công cụ sản xuất video YouTube theo hướng ưu tiên chạy tại máy người dùng. Mã nguồn dùng Python + FastAPI (`app.py`), SQLite (`core/database.py`), giao diện tĩnh (`web/`), module pipeline (`modules/`) và pytest (`tests/`). FFmpeg dùng ghép video cơ bản. Trước khi giả định dependency, hãy xác minh từ file.

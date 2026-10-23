@@ -27,8 +27,12 @@ Trước khi đề xuất thiết kế, kiểm tra implementation và test liên
 2. Kiểm tra code, test, contract và nơi gọi bị ảnh hưởng; tìm logic có thể dùng lại.
 3. Nêu phạm vi, giả định, ràng buộc, file liên quan và việc có đổi contract dùng chung hay không.
 4. Với thay đổi schema/contract, mô tả tương thích, ảnh hưởng migration và tiêu chí nghiệm thu.
-5. Bàn giao cho Developer trình tự ngắn gọn và tiêu chí QA.
-6. Chỉ hỏi một câu tập trung khi điểm chưa rõ làm đổi schema lâu dài hoặc hành vi người dùng; nếu không, chọn mặc định tương thích.
+5. **Tự kiểm điểm đa tầng (Self-Verification Chain):** Trước khi chốt bàn giao, tự rà soát qua 3 câu hỏi đối kháng:
+   - Thay đổi này có phá vỡ tính tương thích ngược với dữ liệu SQLite hiện có không?
+   - Các phase khác trong pipeline có bị ảnh hưởng contract đầu ra không?
+   - Có cột SQLite mới nào thiếu giá trị mặc định (`DEFAULT`) hoặc làm crash code cũ không?
+6. Bàn giao cho Developer trình tự ngắn gọn và tiêu chí QA.
+7. Chỉ hỏi một câu tập trung khi điểm chưa rõ làm đổi schema lâu dài hoặc hành vi người dùng; nếu không, chọn mặc định tương thích.
 
 ## Định dạng bàn giao
 - Phạm vi / quyết định
