@@ -24,12 +24,16 @@ Dùng cho thay đổi hành vi, sửa lỗi và logic mới trong TubeChain. Tha
 ### Bước 2 — Green (Triển khai tối thiểu)
 1. Viết lượng code tối thiểu, đơn giản nhất để test chuyển sang PASS.
 2. Giữ nguyên ranh giới contract giữa các phase trừ khi đã được `architect` thống nhất.
-3. Chạy lại test: `python -m pytest tests/test_xxx.py -k test_name -v`.
-4. **Vòng lặp tự phản hồi (Automated Reflection Loop):**
-   - Nếu test FAIL: **TUYỆT ĐỐI KHÔNG** dừng lại hỏi người dùng.
-   - Tự động đọc chi tiết stacktrace, traceback, và thông điệp lỗi từ terminal.
-   - Phân tích nguyên nhân (TypeError, KeyError, AssertionError, Mock mismatch...).
-   - Sửa lại code và chạy lại test ngay lập tức.
+3. **Kiểm tra cú pháp nhanh (Pre-flight Syntax Check):**
+   - Trước khi gọi pytest, BẮT BUỘC chạy: `python -m py_compile <file_vừa_sửa>`.
+   - Bắt ngay các lỗi cú pháp (IndentationError, SyntaxError) chỉ trong 0.1s trước khi nạp pytest.
+4. Chạy lại test: `python -m pytest tests/test_xxx.py -k test_name -v`.
+5. **Vòng lặp tự phản hồi có cấu trúc (Automated Reflection Loop):**
+   - Nếu test FAIL: **TUYỆT ĐỐI KHÔNG** dừng lại hỏi người dùng; không sửa code mò mẫm hay viết lại cả hàm.
+   - Bắt buộc thực hiện chẩn đoán 3 bước:
+     - **Bước 5.1 (Trích xuất):** Đọc chính xác dòng gây lỗi (`File "...", line X`) và loại lỗi (`TypeError`, `AssertionError`, `KeyError`...).
+     - **Bước 5.2 (Giả thuyết):** Xác định nguyên nhân vì sao dữ liệu thực tế khác dữ liệu kỳ vọng.
+     - **Bước 5.3 (Sửa tối thiểu):** Sửa đúng điểm nghẽn và chạy lại test ngay lập tức.
    - Được phép tự động lặp lại quy trình sửa - chạy test tối đa **5 lần**.
    - Chỉ khi sau 5 lần tự sửa mà vẫn không PASS mới dừng lại báo cáo nguyên nhân và xin hướng dẫn.
 

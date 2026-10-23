@@ -152,3 +152,24 @@ def test_post_tool_use_ignores_other_tool_names() -> None:
 
     assert result.returncode == 0
     assert result.stdout == ""
+
+
+def test_post_tool_use_warns_micro_tasking_when_lines_exceed_60() -> None:
+    big_content = "\n".join([f"line_{i} = {i}" for i in range(70)])
+    result = run_hook(
+        POST_HOOK,
+        {
+            "hook_event_name": "PostToolUse",
+            "tool_name": "Write",
+            "tool_input": {
+                "file_path": str(ROOT / "modules" / "idea_engine" / "engine.py"),
+                "content": big_content,
+            },
+        },
+    )
+
+    output = output_json(result)
+    context = output["hookSpecificOutput"]
+    assert context["hookEventName"] == "PostToolUse"
+    assert "CẢNH BÁO MICRO-TASKING" in context["additionalContext"]
+
