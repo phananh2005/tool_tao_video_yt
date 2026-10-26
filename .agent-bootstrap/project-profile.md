@@ -70,9 +70,9 @@
 | Mục | Giá trị | Bằng chứng |
 |---|---|---|
 | Nhánh mặc định | `main` | Git context: "Main branch: main" |
-| Nhánh được bảo vệ | `main` [suy luận] | Thường thấy; không có cấu hình rõ |
+| Nhánh được bảo vệ | `main` | Người dùng xác nhận (2026-10-26) |
 | Quy ước tên nhánh | không có quy ước thành văn | Quan sát: `new_ai_agent-3` |
-| Quy ước commit | `type(scope): message` [suy luận] | `git log`: `chore(docs):`, `feat:` |
+| Quy ước commit | `type(scope): message` — chỉ commit/push khi người dùng yêu cầu | Người dùng xác nhận (2026-10-26); `git log`: `chore(docs):`, `feat:` |
 | Nền tảng review | GitHub [suy luận] | Remote origin |
 
 ## 9. Playbook & hook
@@ -121,6 +121,6 @@
 ## 13. Còn chờ xác nhận
 
 - [x] Manifest dependency: Đã tạo `requirements.txt` chuẩn cho dự án.
-- [ ] Ngưỡng số truy vấn SQLite (`N_DETAIL`, `N_LIST`, `N_WRITE`) — dùng mặc định đề xuất trong `non-functional-standards.md`, cần người dùng chốt
-- [ ] Quy ước commit — suy luận từ git log (`type(scope): message`), chưa có văn bản chính thức
-- [ ] Nhánh được bảo vệ — suy luận `main`
+- [x] Ngưỡng số truy vấn SQLite: Detail ≤ 3, List ≤ 4, Write ≤ 6 — người dùng xác nhận (2026-10-26)
+- [x] Quy ước commit: `type(scope): message` — chỉ commit/push khi người dùng yêu cầu rõ — người dùng xác nhận (2026-10-26)
+- [x] Nhánh được bảo vệ: `main` — người dùng xác nhận (2026-10-26)
