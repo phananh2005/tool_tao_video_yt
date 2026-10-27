@@ -158,6 +158,35 @@ def test_save_asset():
     assert data["assets"][0]["image_prompt"] == "cat"
 
 
+def test_save_asset_preserves_voice_metadata():
+    pid = get_or_create_project("P6_voice")
+    save_idea(pid, _make_idea(), 0.0, "pass")
+    save_script(1, _make_script(idea_id=1))
+    # Pre-populate asset with voice metadata from Phase 3.5
+    conn = sqlite3.connect(db_mod.DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT INTO assets (script_id, content) VALUES (?, ?)",
+        (1, json.dumps({"script_id": 1, "voice": "vi-VN-NamMinhNeural", "assets": []}))
+    )
+    conn.commit()
+    conn.close()
+
+    # Call save_asset (from Phase 4)
+    asset = _make_asset(script_id=1)
+    save_asset(1, asset)
+
+    conn = sqlite3.connect(db_mod.DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT content FROM assets WHERE script_id = 1")
+    row = cursor.fetchone()
+    conn.close()
+    assert row is not None
+    data = json.loads(row[0])
+    assert data.get("voice") == "vi-VN-NamMinhNeural"
+
+
+
 # ---------- save seo ----------
 
 def test_save_seo_metadata():

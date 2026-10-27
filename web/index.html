@@ -367,6 +367,13 @@
                     </div>
                     <div class="flex flex-wrap items-center gap-3">
                         <span v-if="isVoiceoverDirty" class="bg-amber-100 text-amber-800 px-3 py-1.5 rounded-lg font-semibold text-sm border border-amber-200 animate-pulse">⚠️ Chưa lưu</span>
+                        <div class="flex items-center gap-2 bg-white border border-slate-300 rounded-lg px-3 py-2 shadow-sm">
+                            <span class="text-xs font-bold text-slate-500 uppercase">Giọng:</span>
+                            <select v-model="selectedVoice" @change="onVoiceChange" class="bg-transparent text-sm font-bold text-slate-700 outline-none cursor-pointer">
+                                <option value="vi-VN-HoaiMyNeural">👩 Hoài My (Nữ)</option>
+                                <option value="vi-VN-NamMinhNeural">👨 Nam Minh (Nam)</option>
+                            </select>
+                        </div>
                         <button @click="generateVoiceover" class="bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 px-4 py-2.5 rounded-lg font-bold shadow-sm transition-colors flex items-center gap-2">
                             <span>🔄</span> Tạo lại Lời Thoại
                         </button>
@@ -674,6 +681,7 @@
                     isScriptDirty: false,
                     voiceoverData: null,
                     isVoiceoverDirty: false,
+                    selectedVoice: (typeof localStorage !== 'undefined' && localStorage.getItem('tubechain_selected_voice')) || 'vi-VN-HoaiMyNeural',
                     audioCacheVersion: 1,
                     imageCacheVersion: 1,
                     videoCacheVersion: 1,
@@ -744,6 +752,11 @@
                 markVoiceoverDirty() {
                     this.isVoiceoverDirty = true;
                 },
+                onVoiceChange() {
+                    if (this.selectedVoice && typeof localStorage !== 'undefined') {
+                        localStorage.setItem('tubechain_selected_voice', this.selectedVoice);
+                    }
+                },
                 markAssetDirty() {
                     this.isAssetDirty = true;
                 },
@@ -762,7 +775,7 @@
                 },
                 async synthesizeSingleScene(scene) {
                     this.withLoading(`Đang tổng hợp TTS cho Scene ${scene.scene_number}...`, async () => {
-                        const res = await this.apiCall(`/api/phase3_5/synthesize/${this.currentProject.current_script_id}/${scene.scene_number}`, 'POST', { text: scene.spoken_text });
+                        const res = await this.apiCall(`/api/phase3_5/synthesize/${this.currentProject.current_script_id}/${scene.scene_number}`, 'POST', { text: scene.spoken_text, voice: this.selectedVoice });
                         if (res && res.status === 'success') {
                             this.audioCacheVersion++;
                             try {
@@ -946,7 +959,7 @@
                 },
                 async synthesizeVoice() {
                     this.withLoading('Đang tổng hợp toàn bộ Voiceover (TTS)...', async () => {
-                        await this.apiCall("/api/phase3_5/synthesize/" + this.currentProject.current_script_id, 'POST');
+                        await this.apiCall("/api/phase3_5/synthesize/" + this.currentProject.current_script_id, 'POST', { voice: this.selectedVoice });
                         this.audioCacheVersion++;
                         if (this.voiceoverData) {
                             this.voiceoverData.is_synthesized = true;

@@ -285,6 +285,8 @@ def save_asset(script_id: int, asset_obj):
                         new_sc['duration_seconds'] = existing_sc['duration_seconds']
                     if 'audio_path' in existing_sc:
                         new_sc['audio_path'] = existing_sc['audio_path']
+        if isinstance(existing_data, dict) and 'voice' in existing_data and 'voice' not in asset_dict:
+            asset_dict['voice'] = existing_data['voice']
         cursor.execute("UPDATE assets SET content = ? WHERE script_id = ?", (json.dumps(asset_dict), script_id))
     else:
         cursor.execute("INSERT INTO assets (script_id, content) VALUES (?, ?)", (script_id, json.dumps(asset_dict)))

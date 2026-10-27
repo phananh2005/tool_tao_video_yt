@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Body
 from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from typing import Optional
 import sqlite3
 import json
 import os
@@ -307,17 +308,23 @@ def update_voiceover(script_id: int, req: UpdateVoiceoverRequest):
     conn.close()
     return {"status": "success"}
 
-from pydantic import BaseModel
+class SynthesizeVoiceRequest(BaseModel):
+    voice: Optional[str] = None
+    force: Optional[bool] = False
+
 class SynthesizeSceneRequest(BaseModel):
     text: str
+    voice: Optional[str] = None
 
 @app.post("/api/phase3_5/synthesize/{script_id}")
-def synthesize_voice(script_id: int):
+def synthesize_voice(script_id: int, req: Optional[SynthesizeVoiceRequest] = None):
     try:
         synth = VoiceSynthesizer()
-        result_paths = synth.synthesize_voiceover(script_id)
+        voice = req.voice if req else None
+        force = bool(req.force) if req else False
+        result_paths = synth.synthesize_voiceover(script_id, voice=voice, force=force)
         if not result_paths:
-            raise HTTPException(status_code=400, detail="Chưa có dữ liệu Voiceover.")
+            raise HTTPException(status_code=400, detail="Tổng hợp giọng nói thất bại hoặc chưa có kịch bản lời thoại.")
         conn = get_conn()
         cursor = conn.cursor()
         cursor.execute("UPDATE voiceovers SET is_synthesized = 1 WHERE script_id = ?", (script_id,))
@@ -334,7 +341,7 @@ def synthesize_voice(script_id: int):
 def synthesize_voice_scene(script_id: int, scene_number: int, req: SynthesizeSceneRequest):
     try:
         synth = VoiceSynthesizer()
-        audio_url = synth.synthesize_single_scene(script_id, scene_number, req.text)
+        audio_url = synth.synthesize_single_scene(script_id, scene_number, req.text, voice=req.voice)
         return {"status": "success", "audio_url": audio_url}
     except Exception as e:
         logger.error(f"API Error: {e}")
