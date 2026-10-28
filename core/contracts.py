@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import List, Optional
 from abc import ABC, abstractmethod
+from core.exceptions import ImageRefusalError, ImageGenerationError, ImageTimeoutError
 
 @dataclass
 class IdeaJSON:
@@ -59,6 +60,8 @@ class AssetSceneJSON:
     image_path: str
     audio_path: Optional[str] = None
     duration_seconds: Optional[float] = None
+    is_placeholder: bool = False
+    refusal_reason: Optional[str] = None
 
 @dataclass
 class AssetJSON:

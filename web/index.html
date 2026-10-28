@@ -474,6 +474,9 @@
                                 <img :src="'/' + scene.image_path + '?v=' + imageCacheVersion" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" alt="Scene Image">
                                 <!-- Lớp overlay bóng đổ nhẹ -->
                                 <div class="absolute inset-0 ring-1 ring-inset ring-black/10"></div>
+                                <div v-if="scene.is_placeholder" class="absolute top-2 right-2 bg-amber-500/90 text-white text-xs px-2.5 py-1 rounded-md font-bold shadow flex items-center gap-1 backdrop-blur-sm">
+                                    <span>⚠️</span> Ảnh tạm (Cần vẽ lại)
+                                </div>
                             </template>
                             <template v-else>
                                 <div class="text-center">
@@ -996,18 +999,20 @@
                     });
                 },
                 async continueGenerateAssets() {
-                    const missingScenes = this.assetData.assets.filter(s => !s.image_path);
+                    const missingScenes = this.assetData.assets.filter(s => !s.image_path || s.is_placeholder);
                     if (missingScenes.length === 0) {
                         this.addToast('Đã đủ ảnh cho tất cả các cảnh, không có gì để vẽ tiếp!', 'info');
                         return;
                     }
-                    this.withLoading(`Đang vẽ tiếp ${missingScenes.length} ảnh còn thiếu...`, async () => {
+                    this.withLoading(`Đang vẽ tiếp ${missingScenes.length} ảnh còn thiếu hoặc tạm thời...`, async () => {
                         let successCount = 0;
                         for (const scene of missingScenes) {
                             try {
                                 const res = await this.apiCall(`/api/phase4/generate/${this.currentProject.current_script_id}/${scene.scene_number}`, 'POST', { image_prompt: scene.image_prompt }, true);
                                 if (res && res.status === 'success') {
                                     scene.image_path = res.image_path;
+                                    scene.is_placeholder = Boolean(res.is_placeholder);
+                                    scene.refusal_reason = res.refusal_reason || null;
                                     this.imageCacheVersion++;
                                     successCount++;
                                 }
@@ -1028,6 +1033,8 @@
                         const res = await this.apiCall(`/api/phase4/generate/${this.currentProject.current_script_id}/${scene.scene_number}`, 'POST', { image_prompt: scene.image_prompt });
                         if (res && res.status === 'success') {
                             scene.image_path = res.image_path;
+                            scene.is_placeholder = Boolean(res.is_placeholder);
+                            scene.refusal_reason = res.refusal_reason || null;
                             this.imageCacheVersion++;
                         }
                     });

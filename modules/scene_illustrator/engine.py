@@ -7,6 +7,8 @@ import time
 import re
 from core import database
 from core.contracts import AIProviderContract, AssetSceneJSON, AssetJSON
+from core.exceptions import ImageRefusalError
+from modules.scene_illustrator.placeholder import create_placeholder_image
 
 class SceneIllustratorEngine:
     def __init__(self, adapter: AIProviderContract):
@@ -37,17 +39,47 @@ class SceneIllustratorEngine:
         context = "\n".join([f"- {sc['visual_concept']}" for sc in sample_scenes])
 
         prompt = f"""
-        Nhiệm vụ: Xây dựng GIÁM ĐỐC NGHỆ THUẬT (Art Direction) ĐỒNG NHẤT cho một video YouTube.
+        Nhiệm vụ: Xây dựng GIÁM ĐỐC NGHỆ THUẬT (Art Direction) ĐỒNG NHẤT VÀ NGUYÊN BẢN cho một video YouTube.
         Dưới đây là một số hình ảnh xuất hiện trong video:
         {context}
 
         Yêu cầu:
-        Bạn là một Giám đốc Nghệ thuật (Art Director) hàng đầu. Hãy định nghĩa MỘT phong cách hình ảnh (Visual Style) xuyên suốt cho video này để tất cả các ảnh tạo ra trông như cùng một bộ phim.
-        Hãy viết một đoạn mô tả phong cách bằng TIẾNG ANH (khoảng 30-50 từ) gồm: Style (Cinematic, 3D, Anime, Minimalist...), Lighting (Dramatic, soft...), Color Palette (Muted, vibrant...), và Mood.
+        Bạn là Giám đốc Nghệ thuật (Art Director) chuyên nghiệp. Hãy định nghĩa MỘT phong cách hình ảnh (Visual Style) xuyên suốt bằng TIẾNG ANH (khoảng 30-45 từ) gồm: Style, Lighting, Color Palette, Mood.
+
+        RÀNG BUỘC PHÒNG NGỪA BẢN QUYỀN BÊN THỨ BA (BẮT BUỘC):
+        1. TUYỆT ĐỐI KHÔNG dùng tên studio, hãng phim (KHÔNG Pixar, Disney, Studio Ghibli, DreamWorks, Marvel).
+        2. TUYỆT ĐỐI KHÔNG nhắc tên bất kỳ họa sĩ hay nghệ sĩ cụ thể nào.
+        3. CHỈ DÙNG thuật ngữ nghệ thuật trung tính, nguyên bản (ví dụ: stylized 2.5D digital illustration, modern minimalist vector art).
 
         Chỉ trả về đoạn mô tả phong cách bằng tiếng Anh thuần túy.
         """
         return self.adapter.generate_text(prompt, expected_format='text').strip()
+
+    def sanitize_prompt_via_ai(self, prompt: str, refusal_reason: str = "") -> str:
+        sanitize_instruction = f"""
+        Rewrite the following image prompt into an original, 100% unbranded Text-to-Image prompt in English.
+        The previous prompt was REFUSED with reason: "{refusal_reason}".
+
+        RULES:
+        1. Strip all trademarked characters, celebrities, brand names, and copyrighted intellectual property.
+        2. Replace them with generic descriptions, cute cartoon animals, or friendly robots.
+        3. Maintain the artistic visual style, composition, lighting, and action.
+        4. Output ONLY the sanitized English prompt (maximum 75 words), no explanations, no quotes.
+
+        Original prompt:
+        {prompt}
+        """
+        sanitized = self.adapter.generate_text(sanitize_instruction, expected_format='text').strip()
+        if sanitized.startswith('"') and sanitized.endswith('"'):
+            sanitized = sanitized[1:-1]
+        return sanitized
+
+    def sanitize_prompt_safe_mode(self, scene_number: int, visual_concept: str) -> str:
+        return (
+            f"A cheerful cute cartoon animal or friendly robot illustrating: {visual_concept}. "
+            "Simple clean shapes, bright pleasant colors, friendly atmosphere, vector art style. "
+            "No text, no words, no letters, no logos, no real people, completely original fictional artwork."
+        )
 
     def generate_single_image(self, script_id: int, scene_number: int, prompt: str) -> str:
         project_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'projects', str(script_id)))
@@ -63,18 +95,41 @@ class SceneIllustratorEngine:
             except Exception:
                 pass
 
-        try:
-            img_url = self.adapter.generate_image(prompt, save_path=img_path)
-        except Exception as e:
-            logger.error(f"  -> LỖI KHI VẼ ẢNH: {e}")
-            img_url = None
+        current_prompt = prompt
+        image_success = False
+        refusal_reason = None
+        max_retries = 2
 
-        if img_url and os.path.exists(img_path):
+        for attempt in range(max_retries + 1):
+            try:
+                img_url = self.adapter.generate_image(current_prompt, save_path=img_path)
+                if img_url and os.path.exists(img_path):
+                    image_success = True
+                    break
+                break
+            except ImageRefusalError as e:
+                refusal_reason = e.reason
+                logger.warning(f"  -> Gemini từ chối vẽ ảnh (lần {attempt + 1}): {e.reason}")
+                if attempt == 0:
+                    try:
+                        current_prompt = self.sanitize_prompt_via_ai(current_prompt, e.reason)
+                    except Exception as se:
+                        logger.warning(f"  -> Lỗi gọi sanitize AI ({se}), chuyển sang safe-mode.")
+                        current_prompt = self.sanitize_prompt_safe_mode(scene_number, prompt)
+                elif attempt == 1:
+                    current_prompt = self.sanitize_prompt_safe_mode(scene_number, prompt)
+            except Exception as e:
+                logger.error(f"  -> LỖI KHI VẼ ẢNH: {e}")
+                break
+
+        if image_success and os.path.exists(img_path):
             logger.info("  -> TẢI ẢNH THÀNH CÔNG!")
-            return f"data/projects/{script_id}/{img_name}"
+            return (f"data/projects/{script_id}/{img_name}", False, None)
         else:
-            logger.error("  -> LỖI: Trình giả lập không thể sinh hoặc tải ảnh về.")
-            return None
+            logger.warning("  -> Kích hoạt ảnh Placeholder an toàn bằng FFmpeg.")
+            if create_placeholder_image(img_path, scene_number, refusal_reason or "AI Refusal"):
+                return (f"data/projects/{script_id}/{img_name}", True, refusal_reason)
+            return (None, False, None)
 
     def _get_existing_assets(self, script_id: int) -> dict:
         conn = sqlite3.connect(database.DB_PATH)
@@ -140,18 +195,18 @@ class SceneIllustratorEngine:
 
             # Sử dụng AI để Optimize Image Prompt cho scene này
             optimize_prompt = f"""
-            Rewrite the following scene description into a highly detailed, professional Text-to-Image prompt (in English).
+            Rewrite the following scene description into an original, highly detailed Text-to-Image prompt in English that strictly complies with third-party copyright policies.
 
             Visual Concept: {visual_concept}
             Narration happening in this scene: "{spoken_text}"
             Global Art Style for the video: {art_direction}
 
             RULES:
-            - Combine the visual concept and narration into one cohesive, highly descriptive visual scene.
+            - Combine visual concept and narration into one cohesive, dynamic visual scene.
             - Focus on composition, subject action, camera angle, and the exact art style provided.
-            - Do not include text, words, logos, or letters in the image.
-            - AVOID ANY SENSITIVE CONTENT: Do not include real people, real politicians, violence, gore, nudity, or controversial topics. If the scene involves humans in a potentially sensitive context, replace them with cute animals, robots, or stick figures to ensure AI safety filters are not triggered.
-            - Output ONLY the final image prompt text in English, nothing else. Maximum 100 words.
+            - THIRD-PARTY IP & BRAND NEUTRALIZATION (MANDATORY): Replace all brand/company names, trademarked products, celebrities, and copyrighted characters with generic unbranded objects, cute cartoon animals, or friendly robots.
+            - STRICTLY NO text, NO words, NO logos, NO emblems, NO watermarks, NO real humans, NO violence.
+            - Output ONLY the final image prompt text in English, maximum 85 words.
             """
             optimized_concept = self.adapter.generate_text(optimize_prompt, expected_format='text').strip()
             # Xóa các dấu ngoặc kép bọc ngoài nếu có
@@ -178,25 +233,61 @@ class SceneIllustratorEngine:
                 ) is not None
                 and existing_scene.get('image_prompt') == image_prompt
                 and existing_scene.get('image_path') == f"data/projects/{script_id}/{img_name}"
+                and not existing_scene.get('is_placeholder', False)
             ):
                 logger.info("  -> Ảnh đã tồn tại với prompt hiện tại (Skip).")
                 rel_path = f"data/projects/{script_id}/{img_name}"
                 final_assets.append(AssetSceneJSON(scene_number=s_num, image_prompt=image_prompt, image_path=rel_path))
                 continue
 
-            try:
-                img_url = self.adapter.generate_image(image_prompt, save_path=img_path)
-            except Exception as e:
-                logger.error(f"  -> LỖI KHI VẼ ẢNH: {e}")
-                img_url = None
+            current_prompt = image_prompt
+            image_success = False
+            is_placeholder = False
+            refusal_reason_record = None
+            max_retries = 2
 
-            if img_url and os.path.exists(img_path):
+            for attempt in range(max_retries + 1):
+                try:
+                    img_url = self.adapter.generate_image(current_prompt, save_path=img_path)
+                    if img_url and os.path.exists(img_path):
+                        image_success = True
+                        break
+                    break
+                except ImageRefusalError as e:
+                    refusal_reason_record = e.reason
+                    logger.warning(f"  -> Gemini từ chối vẽ ảnh (lần {attempt + 1}): {e.reason}")
+                    if attempt == 0:
+                        try:
+                            current_prompt = self.sanitize_prompt_via_ai(current_prompt, e.reason)
+                        except Exception as se:
+                            logger.warning(f"  -> Lỗi gọi sanitize AI ({se}), chuyển sang safe-mode.")
+                            current_prompt = self.sanitize_prompt_safe_mode(s_num, visual_concept)
+                    elif attempt == 1:
+                        current_prompt = self.sanitize_prompt_safe_mode(s_num, visual_concept)
+                except Exception as e:
+                    logger.error(f"  -> LỖI KHI VẼ ẢNH: {e}")
+                    break
+
+            if image_success and os.path.exists(img_path):
                 logger.info("  -> TẢI ẢNH THÀNH CÔNG!")
                 rel_path = f"data/projects/{script_id}/{img_name}"
-                final_assets.append(AssetSceneJSON(scene_number=s_num, image_prompt=image_prompt, image_path=rel_path))
             else:
-                logger.error("  -> LỖI: Gemini từ chối vẽ ảnh hoặc không thể trích xuất/tải ảnh về.")
-                final_assets.append(AssetSceneJSON(scene_number=s_num, image_prompt=image_prompt, image_path=""))
+                logger.warning(f"  -> Scene {s_num}: Kích hoạt Fallback Placeholder bằng FFmpeg...")
+                if create_placeholder_image(img_path, s_num, refusal_reason_record or "AI Refusal"):
+                    rel_path = f"data/projects/{script_id}/{img_name}"
+                    is_placeholder = True
+                else:
+                    logger.error(f"  -> Scene {s_num}: Không thể tạo ảnh placeholder.")
+                    rel_path = ""
+                    is_placeholder = False
+
+            final_assets.append(AssetSceneJSON(
+                scene_number=s_num,
+                image_prompt=current_prompt,
+                image_path=rel_path,
+                is_placeholder=is_placeholder,
+                refusal_reason=refusal_reason_record if is_placeholder else None
+            ))
 
             time.sleep(5)
 

@@ -422,7 +422,9 @@ def generate_single_asset(script_id: int, scene_number: int, req: GenerateSingle
     try:
         adapter = GeminiWebAdapter()
         engine = SceneIllustratorEngine(adapter=adapter)
-        image_path = engine.generate_single_image(script_id, scene_number, req.image_prompt)
+        image_path, is_placeholder, refusal_reason = engine.generate_single_image(
+            script_id, scene_number, req.image_prompt
+        )
 
         if not image_path:
             raise HTTPException(status_code=500, detail="Không thể sinh ảnh, xem log backend.")
@@ -438,12 +440,19 @@ def generate_single_asset(script_id: int, scene_number: int, req: GenerateSingle
                 if a_sc.get('scene_number') == scene_number:
                     a_sc['image_prompt'] = req.image_prompt
                     a_sc['image_path'] = image_path
+                    a_sc['is_placeholder'] = is_placeholder
+                    a_sc['refusal_reason'] = refusal_reason if is_placeholder else None
                     break
             cursor.execute("UPDATE assets SET content = ? WHERE script_id = ?", (json.dumps(asset_data), script_id))
             conn.commit()
         conn.close()
 
-        return {"status": "success", "image_path": image_path}
+        return {
+            "status": "success",
+            "image_path": image_path,
+            "is_placeholder": is_placeholder,
+            "refusal_reason": refusal_reason
+        }
     except Exception as e:
         logger.error(f"API Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))

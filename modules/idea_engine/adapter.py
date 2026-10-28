@@ -1,4 +1,5 @@
 ﻿from core.contracts import AIProviderContract
+from core.exceptions import ImageRefusalError, ImageTimeoutError
 from core.logger import get_logger
 logger = get_logger(__name__)
 from playwright.sync_api import sync_playwright
@@ -7,6 +8,37 @@ import json
 import re
 import os
 import sys
+
+REFUSAL_KEYWORDS = [
+    'bên thứ ba',
+    'nhà cung cấp nội dung',
+    'không tạo được hình ảnh',
+    'không thể tạo hình ảnh',
+    'chỉnh sửa câu lệnh',
+    'vi phạm chính sách',
+    'tiêu chuẩn cộng đồng',
+    'bản quyền',
+    'không thể thực hiện',
+    "can't generate",
+    "cannot generate",
+    "unable to generate",
+    "can't fulfill",
+    "cannot fulfill",
+    "unable to fulfill",
+    "third-party content",
+    "third-party",
+    "third party",
+    "copyright",
+    "safety guidelines",
+    "content policy"
+]
+
+def is_refusal_text(text: str) -> bool:
+    """Kiểm tra phản hồi của Gemini có chứa mẫu từ chối do bản quyền/chính sách."""
+    if not isinstance(text, str) or not text.strip():
+        return False
+    lower_text = text.lower()
+    return any(kw in lower_text for kw in REFUSAL_KEYWORDS)
 
 class GeminiWebAdapter(AIProviderContract):
     def __init__(self):
@@ -105,50 +137,74 @@ class GeminiWebAdapter(AIProviderContract):
 
                 page.wait_for_selector(input_selector, state="visible", timeout=120000)
 
-                full_prompt = f"Hãy tạo 1 bức ảnh TỶ LỆ 16:9, phong cách HOẠT HÌNH 2D (2D cartoon), nét vẽ đơn giản, dễ nhìn, vui nhộn để minh họa cho cảnh: {prompt}. LƯU Ý BẮT BUỘC ĐỂ KHÔNG BỊ CHẶN: TUYỆT ĐỐI KHÔNG vẽ người thật, KHÔNG bạo lực, KHÔNG nhạy cảm. Nếu kịch bản có con người, BẮT BUỘC thay thế bằng ĐỘNG VẬT DỄ THƯƠNG (chó, mèo, thỏ...) hoặc ROBOT ĐÁNG YÊU. CHỈ TẠO ẢNH, KHÔNG GIẢI THÍCH."
+                full_prompt = (
+                    f"Hãy tạo 1 bức ảnh TỶ LỆ 16:9, phong cách HOẠT HÌNH NGUYÊN BẢN (Original Stylized Cartoon), "
+                    f"nét vẽ rõ ràng, vui nhộn để minh họa: {prompt}. "
+                    f"LƯU Ý BẮT BUỘC ĐỂ KHÔNG BỊ CHẶN BỞI BỘ LỌC BÊN THỨ BA VÀ BẢN QUYỀN: "
+                    f"1. TUYỆT ĐỐI KHÔNG vẽ bất kỳ logo, thương hiệu, nhãn hiệu thương mại, hoặc nhân vật bên thứ ba nào. "
+                    f"Mọi đồ vật công nghệ, xe cộ đều là hư cấu, trung tính, không nhãn mác (unbranded generic objects). "
+                    f"2. TUYỆT ĐỐI KHÔNG vẽ người thật hoặc người nổi tiếng. BẮT BUỘC thay thế con người bằng ĐỘNG VẬT DỄ THƯƠNG (chó, mèo, thỏ...) hoặc ROBOT ĐÁNG YÊU. "
+                    f"3. TUYỆT ĐỐI KHÔNG chứa chữ viết (no text, no letters), không watermark. "
+                    f"4. Đây là tác phẩm nghệ thuật hư cấu 100% nguyên bản. CHỈ TẠO ẢNH, KHÔNG GIẢI THÍCH."
+                )
 
                 page.fill(input_selector, full_prompt)
                 page.keyboard.press("Enter")
                 time.sleep(4)
-                
-                logger.info("[Adapter] Đang chờ Gemini vẽ ảnh (Có thể mất đến 3 phút)...")
-                
-                # GIẢI PHÁP TỐI THƯỢNG (LÀM 1 LẦN DỨT ĐIỂM): 
-                # Không tìm the class hay URL nữa. Dùng JS soi toàn bộ trang web liên tục trong 3 phút.
-                # Cứ thấy thẻ <img> nào render to hơn 250px (chắc chắn là ảnh AI vẽ ra, icon/avatar không bao giờ to thế này)
-                # thì tóm ngay lấy cái Element đó và CHỤP ẢNH MÀN HÌNH cắt đúng cái thẻ đó lưu về.
-                
-                js_wait_function = '''() => {
+
+                logger.info("[Adapter] Đang chờ Gemini vẽ ảnh hoặc phản hồi...")
+
+                keywords_json = json.dumps(REFUSAL_KEYWORDS, ensure_ascii=False)
+                js_wait_function = f'''() => {{
                     const imgs = Array.from(document.querySelectorAll('img'));
-                    // Đi ngược từ dưới lên để lấy bức ảnh mới nhất vừa vẽ
-                    for (let i = imgs.length - 1; i >= 0; i--) {
+                    for (let i = imgs.length - 1; i >= 0; i--) {{
                         const rect = imgs[i].getBoundingClientRect();
-                        if (rect.width > 250 && rect.height > 150) {
-                            return imgs[i];
-                        }
-                    }
+                        if (rect.width > 250 && rect.height > 150) {{
+                            return {{ status: 'image_ready', index: i }};
+                        }}
+                    }}
+                    const messages = Array.from(document.querySelectorAll('message-content, .message-content, [data-test-id="model-response"]'));
+                    if (messages.length > 0) {{
+                        const lastMsg = messages[messages.length - 1];
+                        const text = (lastMsg.innerText || '').toLowerCase();
+                        const refusalPhrases = {keywords_json};
+                        for (const kw of refusalPhrases) {{
+                            if (text.includes(kw)) {{
+                                return {{ status: 'refusal', reason: lastMsg.innerText.trim() }};
+                            }}
+                        }}
+                    }}
                     return null;
-                }'''
-                
+                }}'''
+
                 try:
-                    # Trình duyệt sẽ liên tục chạy hàm JS trên cho đến khi trả về Element (Tối đa 180 giây)
-                    element_handle = page.wait_for_function(js_wait_function, timeout=180000)
-                    
-                    if element_handle and save_path:
-                        logger.info("[Adapter] => AI đã vẽ xong! Đang đóng gói và lưu ảnh...")
-                        element_handle.scroll_into_view_if_needed()
-                        time.sleep(2) # Chờ 2 giây cho ảnh load độ phân giải cao nhất
-                        
-                        # Chụp đúng tọa độ của bức ảnh đó
-                        element_handle.screenshot(path=save_path)
-                        logger.info("[Adapter] => [THÀNH CÔNG] Đã lưu ảnh vào ổ cứng!")
-                        return "saved_successfully"
-                    else:
-                        return ""
-                except Exception as wait_err:
-                    logger.error(f"[Adapter] Lỗi quá thời gian chờ ảnh xuất hiện: {wait_err}")
+                    eval_result = page.wait_for_function(js_wait_function, timeout=120000)
+                    result_data = eval_result.json_value() if eval_result else None
+
+                    if isinstance(result_data, dict) and result_data.get('status') == 'refusal':
+                        reason = result_data.get('reason') or "Bị từ chối bởi bộ lọc bên thứ ba"
+                        logger.warning(f"[Adapter] Gemini từ chối vẽ ảnh: {reason}")
+                        raise ImageRefusalError(message=f"Gemini từ chối vẽ ảnh: {reason}", reason=reason, prompt=prompt)
+
+                    if isinstance(result_data, dict) and result_data.get('status') == 'image_ready' and save_path:
+                        img_index = result_data.get('index', 0)
+                        imgs = page.query_selector_all('img')
+                        if 0 <= img_index < len(imgs):
+                            element_handle = imgs[img_index]
+                            element_handle.scroll_into_view_if_needed()
+                            time.sleep(2)
+                            element_handle.screenshot(path=save_path)
+                            logger.info("[Adapter] => [THÀNH CÔNG] Đã lưu ảnh vào ổ cứng!")
+                            return "saved_successfully"
                     return ""
-                    
+                except ImageRefusalError:
+                    raise
+                except Exception as wait_err:
+                    logger.error(f"[Adapter] Lỗi quá thời gian chờ hoặc phát hiện ảnh: {wait_err}")
+                    return ""
+
+            except ImageRefusalError:
+                raise
             except Exception as e:
                 logger.error(f"\n[LỖI VẼ ẢNH GEMINI] {e}")
                 return ""
